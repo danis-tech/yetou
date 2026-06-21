@@ -1,0 +1,2030 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>yétou — Médias aériens HD & 4K · Gabon</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sora: ['Sora','sans-serif'], inter: ['Inter','sans-serif'] },
+          colors: {
+            yetou: {
+              dark: '#0A0A0F', darker: '#050508', card: '#14141A',
+              accent: '#C8371A', accentHover: '#A52D16',
+              cyan: '#00C8E0', cyanHover: '#00A8C0',
+              gold: '#FFB300', text: '#F0EFEA', muted: '#8A8A95', border: '#2A2A35'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: #0A0A0F; color: #F0EFEA; min-height: 100vh; font-size: 14px; line-height: 1.6; }
+    img { display: block; max-width: 100%; }
+    button { cursor: pointer; font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+    .font-sora { font-family: 'Sora', sans-serif; }
+
+    /* Hex background */
+    .hex-bg {
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='none' stroke='%231A1A25' stroke-width='0.5'/%3E%3C/svg%3E");
+      background-size: 60px 60px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0A0A0F; }
+    ::-webkit-scrollbar-thumb { background: #2A2A35; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #C8371A; }
+
+    /* Watermarks */
+    .watermark-overlay {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      pointer-events: none; z-index: 10;
+    }
+    .watermark-overlay::after {
+      content: 'yétou'; font-family: 'Sora', sans-serif; font-size: 2.5rem; font-weight: 700;
+      color: rgba(255,255,255,0.12); text-transform: lowercase; letter-spacing: 0.3em;
+      transform: rotate(-15deg); text-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+    .watermark-sm {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%,-50%) rotate(-15deg);
+      color: rgba(255,255,255,0.14); font-family: 'Sora', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: 2px;
+      border: 1px solid rgba(255,255,255,0.22); padding: 3px 10px; border-radius: 4px;
+      pointer-events: none; white-space: nowrap; user-select: none; z-index: 5;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(10,10,15,0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid #2A2A35; height: 64px;
+      display: flex; align-items: center; padding: 0 28px; gap: 24px;
+    }
+    .logo { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: -.5px; white-space: nowrap; color: #F0EFEA; }
+    .logo em { color: #C8371A; font-style: normal; }
+    .logo span { font-size: 10px; font-weight: 400; color: #8A8A95; margin-left: 6px; letter-spacing: 0; }
+
+    .nav-tabs { display: flex; gap: 2px; background: #14141A; border-radius: 9px; padding: 3px; }
+    .nav-tab {
+      padding: 7px 18px; border-radius: 7px; font-size: 13px; font-weight: 500;
+      color: #8A8A95; background: transparent; border: none; transition: all .18s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .nav-tab i { font-size: 15px; }
+    .nav-tab:hover { color: #F0EFEA; }
+    .nav-tab.active { background: #C8371A; color: #fff; box-shadow: 0 2px 8px rgba(200,55,26,.35); }
+
+    .nav-search { flex: 1; max-width: 380px; position: relative; }
+    .nav-search i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #8A8A95; font-size: 16px; pointer-events: none; }
+    .nav-search input {
+      width: 100%; padding: 9px 16px 9px 40px; border: 1px solid #2A2A35; border-radius: 9px;
+      font-size: 13px; font-family: inherit; background: #14141A; color: #F0EFEA; outline: none; transition: .2s;
+    }
+    .nav-search input:focus { background: #14141A; border-color: #C8371A; box-shadow: 0 0 0 3px rgba(200,55,26,.12); }
+    .nav-search input::placeholder { color: #5A5A65; }
+
+    .nav-right { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+    .btn-ghost {
+      padding: 8px 18px; border: 1.5px solid #2A2A35; border-radius: 8px; font-size: 13px;
+      font-weight: 500; background: transparent; color: #F0EFEA; transition: .18s;
+    }
+    .btn-ghost:hover { border-color: #C8371A; color: #fff; }
+    .btn-primary {
+      padding: 8px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+      background: #C8371A; color: #fff; transition: .18s; display: flex; align-items: center; gap: 6px;
+    }
+    .btn-primary:hover { background: #A52D16; }
+    .mobile-menu-btn { display: none; color: #F0EFEA; font-size: 18px; background: none; border: none; }
+
+    @media (max-width: 900px) {
+      .navbar { padding: 0 16px; gap: 12px; }
+      .nav-tabs { display: none; }
+      .nav-search { max-width: none; }
+      .nav-right .btn-ghost { display: none; }
+      .mobile-menu-btn { display: block; }
+    }
+
+    /* Hero */
+    .hero {
+      position: relative; height: 460px; display: flex; align-items: center; justify-content: center;
+      text-align: center; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.35);
+    }
+    .hero-gradient {
+      position: absolute; inset: 0;
+      background: linear-gradient(145deg, rgba(13,31,20,.6) 0%, rgba(26,58,40,.4) 35%, rgba(10,26,48,.5) 70%, rgba(13,16,24,.7) 100%);
+    }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(10,10,15,.95) 0%, transparent 60%);
+    }
+    .hero-content { position: relative; z-index: 2; padding: 0 24px; max-width: 720px; }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(200,55,26,.15); border: 1px solid rgba(200,55,26,.3);
+      border-radius: 20px; padding: 5px 14px; font-size: 11px; color: #F0EFEA;
+      letter-spacing: .5px; font-weight: 500; margin-bottom: 18px;
+    }
+    .hero h1 { font-family: 'Sora', sans-serif; font-size: 38px; font-weight: 700; color: #fff; line-height: 1.2; letter-spacing: -.8px; margin-bottom: 12px; }
+    .hero h1 em { color: #f5a78d; font-style: normal; }
+    .hero p { font-size: 15px; color: rgba(255,255,255,.68); margin-bottom: 28px; font-weight: 300; }
+    .hero-search {
+      display: flex; background: #14141A; border: 1px solid #2A2A35; border-radius: 12px;
+      overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,.4); max-width: 580px; margin: 0 auto 18px;
+    }
+    .hero-search-field {
+      flex: 1; display: flex; align-items: center; position: relative; min-width: 0;
+    }
+    .hero-search-field i { padding: 0 0 0 18px; color: #8A8A95; font-size: 18px; display: flex; align-items: center; }
+    .hero-search input {
+      flex: 1; padding: 15px 14px; border: none; outline: none; font-size: 14px;
+      font-family: inherit; background: #14141A; color: #F0EFEA; min-width: 0;
+    }
+    .hero-search input::placeholder { color: #5A5A65; }
+    .hero-search button {
+      padding: 14px 26px; background: #C8371A; color: #fff; border: none;
+      font-size: 13px; font-weight: 600; font-family: inherit; transition: .18s; white-space: nowrap;
+    }
+    .hero-search button:hover { background: #A52D16; }
+
+    .hero-tags { display: flex; gap: 7px; justify-content: center; flex-wrap: wrap; }
+    .hero-tag {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+      color: rgba(255,255,255,.8); border-radius: 20px; padding: 5px 14px;
+      font-size: 12px; cursor: pointer; transition: .15s; font-weight: 400;
+    }
+    .hero-tag:hover { background: rgba(200,55,26,.25); border-color: rgba(200,55,26,.5); color: #fff; }
+
+    /* Stats bar */
+    .stats-bar {
+      background: #0A0A0F; border-bottom: 1px solid #2A2A35;
+      display: flex; align-items: center; justify-content: center; gap: 0; padding: 0; overflow-x: auto;
+    }
+    .stat-item { display: flex; align-items: center; gap: 10px; padding: 14px 32px; border-right: 1px solid #2A2A35; white-space: nowrap; }
+    .stat-item:last-child { border-right: none; }
+    .stat-icon { width: 34px; height: 34px; border-radius: 8px; background: rgba(200,55,26,.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .stat-icon i { font-size: 17px; color: #C8371A; }
+    .stat-num { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #F0EFEA; }
+    .stat-lbl { font-size: 11px; color: #8A8A95; }
+
+    /* Activity ticker */
+    .activity-bar {
+      background: #050508; border-bottom: 1px solid #2A2A35;
+      padding: 9px 28px; display: flex; align-items: center; gap: 24px; overflow-x: auto;
+    }
+    .activity-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #8A8A95; white-space: nowrap; }
+    .activity-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; flex-shrink: 0; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+    .activity-secure { margin-left: auto; display: flex; align-items: center; gap: 5px; font-size: 11px; color: #8A8A95; white-space: nowrap; }
+    .activity-secure i { font-size: 13px; color: #22c55e; }
+
+    /* Section tabs */
+    .section-tabs {
+      border-bottom: 1px solid #2A2A35; padding: 0 28px; display: flex; gap: 0; background: #0A0A0F;
+    }
+    .stab {
+      padding: 15px 24px; font-size: 14px; font-weight: 500; color: #8A8A95; cursor: pointer;
+      border-bottom: 2px solid transparent; transition: .15s;
+      display: flex; align-items: center; gap: 8px; white-space: nowrap;
+    }
+    .stab i { font-size: 17px; }
+    .stab .badge { background: #14141A; border-radius: 10px; padding: 1px 8px; font-size: 10px; color: #8A8A95; font-weight: 500; }
+    .stab:hover { color: #F0EFEA; }
+    .stab.active { color: #C8371A; border-bottom-color: #C8371A; font-weight: 600; }
+    .stab.active .badge { background: rgba(200,55,26,.15); color: #C8371A; }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .content { padding: 28px; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .filter-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .filter-label { font-size: 12px; color: #8A8A95; font-weight: 500; white-space: nowrap; }
+    .chip {
+      padding: 6px 15px; border: 1.5px solid #2A2A35; border-radius: 20px; font-size: 12px;
+      color: #8A8A95; background: #0A0A0F; transition: .15s; white-space: nowrap; font-weight: 400;
+    }
+    .chip:hover { border-color: #C8371A; color: #F0EFEA; }
+    .chip.active { border-color: #C8371A; color: #fff; background: #C8371A; font-weight: 500; }
+    .filter-sep { width: 1px; height: 22px; background: #2A2A35; margin: 0 4px; }
+    .sort-select {
+      margin-left: auto; padding: 7px 14px; border: 1.5px solid #2A2A35; border-radius: 8px;
+      font-size: 12px; color: #F0EFEA; background: #14141A; font-family: inherit; outline: none; cursor: pointer;
+    }
+    .sort-select option { background: #14141A; }
+
+    /* Section header */
+    .section-hd { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .section-hd h2 { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #F0EFEA; }
+    .section-hd span { font-size: 12px; color: #C8371A; cursor: pointer; font-weight: 500; }
+    .section-hd span:hover { text-decoration: underline; }
+
+    /* ─── Entrance animations ─── */
+    @keyframes fadeUpIn {
+      from { opacity: 0; transform: translateY(30px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Photo grid masonry */
+    .photo-grid { columns: 4; gap: 16px; margin-bottom: 40px; }
+    @media (max-width: 1200px) { .photo-grid { columns: 3; } }
+    @media (max-width: 800px)  { .photo-grid { columns: 2; } }
+    @media (max-width: 500px)  { .photo-grid { columns: 1; } }
+
+    .photo-item {
+      break-inside: avoid; margin-bottom: 16px; border-radius: 14px; overflow: hidden;
+      position: relative; cursor: pointer;
+      background: linear-gradient(160deg, #18181f 0%, #111118 100%);
+      border: 1px solid #262633;
+      transition: transform 0.4s cubic-bezier(.25,.8,.25,1), border-color 0.35s, box-shadow 0.4s;
+      opacity: 0; animation: fadeUpIn 0.6s cubic-bezier(.25,.8,.25,1) forwards;
+    }
+    .photo-item:hover {
+      transform: translateY(-6px);
+      border-color: rgba(200,55,26,0.5);
+      box-shadow: 0 16px 40px rgba(200,55,26,0.12), 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .photo-item img {
+      width: 100%; display: block;
+      transition: transform 0.5s cubic-bezier(.25,.8,.25,1), filter 0.5s;
+      filter: brightness(0.92);
+    }
+    .photo-item:hover img {
+      transform: scale(1.06);
+      filter: brightness(1.05);
+    }
+
+    .photo-tag {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(20,20,26,0.85); backdrop-filter: blur(6px);
+      color: #fff; font-size: 10px; font-weight: 700; padding: 4px 10px;
+      border-radius: 6px; letter-spacing: 0.6px; text-transform: uppercase; z-index: 6;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: background 0.3s;
+    }
+    .photo-tag.k4 {
+      background: rgba(200,55,26,0.9); border-color: rgba(200,55,26,0.4);
+      box-shadow: 0 2px 8px rgba(200,55,26,0.3);
+    }
+
+    .photo-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top,
+        rgba(0,0,0,0.92) 0%,
+        rgba(0,0,0,0.35) 40%,
+        rgba(0,0,0,0.05) 70%,
+        transparent 100%);
+      opacity: 0; transition: opacity 0.35s ease;
+      display: flex; flex-direction: column; justify-content: flex-end; padding: 16px;
+    }
+    .photo-item:hover .photo-overlay { opacity: 1; }
+
+    .photo-info-title {
+      color: #fff; font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+      margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transform: translateY(8px); transition: transform 0.35s ease;
+    }
+    .photo-item:hover .photo-info-title { transform: translateY(0); }
+    .photo-info-sub {
+      color: rgba(255,255,255,0.65); font-size: 10px; margin-bottom: 12px;
+      transform: translateY(8px); transition: transform 0.35s ease 0.04s;
+    }
+    .photo-item:hover .photo-info-sub { transform: translateY(0); }
+    .photo-action {
+      display: flex; justify-content: space-between; align-items: center;
+      transform: translateY(8px); transition: transform 0.35s ease 0.08s;
+    }
+    .photo-item:hover .photo-action { transform: translateY(0); }
+    .photo-price { color: #fff; font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; }
+    .photo-price small { font-size: 10px; font-weight: 400; opacity: 0.65; }
+
+    .btn-buy-sm {
+      padding: 7px 16px; background: linear-gradient(135deg, #C8371A, #e04528);
+      color: #fff; border: none; border-radius: 8px; font-size: 11px; font-weight: 600;
+      font-family: inherit; transition: all 0.2s; cursor: pointer;
+    }
+    .btn-buy-sm:hover { background: #C8371A; box-shadow: 0 4px 14px rgba(200,55,26,0.4); transform: translateY(-1px); }
+
+    .no-results { display: none; text-align: center; padding: 60px 20px; color: #8A8A95; }
+    .no-results i { font-size: 40px; margin-bottom: 12px; display: block; }
+    .no-results p { font-size: 14px; }
+
+    /* Video grid */
+    .video-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+    @media (max-width: 900px) { .video-grid { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 560px) { .video-grid { grid-template-columns: 1fr; } }
+
+    .video-card {
+      background: linear-gradient(160deg, #18181f 0%, #111118 100%);
+      border: 1px solid #262633; border-radius: 16px; overflow: hidden;
+      transition: transform 0.4s cubic-bezier(.25,.8,.25,1), border-color 0.35s, box-shadow 0.4s;
+      cursor: pointer;
+      opacity: 0; animation: fadeUpIn 0.6s cubic-bezier(.25,.8,.25,1) forwards;
+    }
+    .video-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(200,55,26,0.5);
+      box-shadow: 0 16px 40px rgba(200,55,26,0.1), 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .video-thumb {
+      position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #050508;
+    }
+    .video-thumb img {
+      width: 100%; height: 100%; object-fit: cover; filter: brightness(0.9);
+      transition: transform 0.5s cubic-bezier(.25,.8,.25,1), filter 0.5s;
+    }
+    .video-card:hover .video-thumb img {
+      transform: scale(1.06); filter: brightness(1.05);
+    }
+
+    .video-play {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 54px; height: 54px; background: rgba(200,55,26,0.9); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(200,55,26,0.35); z-index: 8;
+    }
+    .video-card:hover .video-play {
+      background: #C8371A; transform: translate(-50%,-50%) scale(1.1);
+      box-shadow: 0 6px 24px rgba(200,55,26,0.5);
+    }
+    .video-play i { font-size: 22px; color: #fff; margin-left: 4px; }
+
+    .video-res {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(200,55,26,0.9); color: #fff; font-size: 9px; font-weight: 700;
+      padding: 4px 10px; border-radius: 6px; z-index: 6;
+      box-shadow: 0 2px 8px rgba(200,55,26,0.3);
+    }
+    .video-dur {
+      position: absolute; bottom: 10px; right: 10px;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+      color: #fff; font-size: 10px; font-weight: 600; padding: 3px 9px;
+      border-radius: 5px; z-index: 6; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .video-body { padding: 16px 18px; }
+    .video-title {
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 600;
+      margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: #F0EFEA;
+    }
+    .video-sub { font-size: 11px; color: #8A8A95; margin-bottom: 14px; }
+    .video-footer { display: flex; justify-content: space-between; align-items: center; }
+    .video-price {
+      font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700;
+      background: linear-gradient(135deg, #C8371A, #e04528);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .video-price small { font-size: 10px; font-weight: 400; color: #8A8A95; margin-left: 2px; -webkit-text-fill-color: #8A8A95; }
+    .btn-buy {
+      padding: 9px 20px;
+      background: linear-gradient(135deg, #C8371A, #e04528);
+      color: #fff; border: none; border-radius: 9px;
+      font-size: 12px; font-weight: 600; font-family: inherit;
+      transition: all 0.25s ease;
+      display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 2px 8px rgba(200,55,26,0.25);
+    }
+    .btn-buy:hover { background: #C8371A; box-shadow: 0 6px 18px rgba(200,55,26,0.4); transform: translateY(-2px); }
+
+    /* Tarifs */
+    .tarifs-wrap { background: #050508; min-height: 500px; padding: 50px 28px; }
+    .tarifs-header { text-align: center; margin-bottom: 36px; }
+    .tarifs-header h2 { font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 8px; letter-spacing: -.4px; color: #F0EFEA; }
+    .tarifs-header p { font-size: 14px; color: #8A8A95; }
+
+    .plans-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; max-width: 980px; margin: 0 auto 40px; }
+    @media (max-width: 760px) { .plans-grid { grid-template-columns: 1fr; } }
+
+    .plan {
+      background: #14141A; border: 1.5px solid #2A2A35; border-radius: 14px; padding: 28px 24px;
+      position: relative; transition: .2s;
+    }
+    .plan:hover { border-color: #3A3A45; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+    .plan.featured { border-color: #C8371A; }
+
+    .plan-badge {
+      position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+      background: #C8371A; color: #fff; font-size: 10px; font-weight: 700;
+      padding: 4px 16px; border-radius: 12px; white-space: nowrap; letter-spacing: .3px;
+    }
+    .plan-icon { width: 44px; height: 44px; border-radius: 11px; background: rgba(200,55,26,.12); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+    .plan-icon i { font-size: 22px; color: #C8371A; }
+    .plan-name { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #8A8A95; margin-bottom: 8px; }
+    .plan-price { font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 700; color: #F0EFEA; letter-spacing: -.8px; line-height: 1; margin-bottom: 3px; }
+    .plan-price sub { font-size: 13px; font-weight: 400; color: #8A8A95; vertical-align: baseline; margin-left: 3px; }
+    .plan-usd { font-size: 12px; color: #8A8A95; margin-bottom: 18px; }
+    .plan-divider { height: 1px; background: #2A2A35; margin-bottom: 16px; }
+    .plan-feats { list-style: none; display: flex; flex-direction: column; gap: 9px; margin-bottom: 22px; }
+    .plan-feats li { font-size: 13px; color: #F0EFEA; display: flex; align-items: flex-start; gap: 9px; }
+    .plan-feats li i { font-size: 16px; color: #C8371A; flex-shrink: 0; margin-top: 1px; }
+    .plan-feats li.off { color: #5A5A65; }
+    .plan-feats li.off i { color: #3A3A45; }
+    .plan-cta { width: 100%; padding: 12px; border-radius: 9px; font-size: 13px; font-weight: 600; font-family: inherit; transition: .15s; }
+    .plan-cta.outline { background: transparent; border: 1.5px solid #2A2A35; color: #F0EFEA; }
+    .plan-cta.outline:hover { border-color: #C8371A; color: #fff; }
+    .plan-cta.solid { background: #C8371A; border: none; color: #fff; }
+    .plan-cta.solid:hover { background: #A52D16; }
+
+    .unit-table { background: #14141A; border: 1px solid #2A2A35; border-radius: 14px; overflow: hidden; max-width: 980px; margin: 0 auto; }
+    .unit-table-header { padding: 18px 24px; border-bottom: 1px solid #2A2A35; }
+    .unit-table-header h3 { font-size: 14px; font-weight: 700; margin-bottom: 2px; color: #F0EFEA; }
+    .unit-table-header p { font-size: 12px; color: #8A8A95; }
+    .unit-row { display: flex; align-items: center; padding: 14px 24px; border-bottom: 1px solid #2A2A35; gap: 12px; }
+    .unit-row:last-child { border-bottom: none; }
+    .unit-row.head { background: #0A0A0F; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #8A8A95; padding: 10px 24px; }
+    .unit-row.highlight { background: rgba(200,55,26,.06); }
+    .unit-type { flex: 1; display: flex; align-items: center; gap: 10px; }
+    .unit-type i { font-size: 18px; color: #8A8A95; }
+    .unit-type-name { font-size: 13px; font-weight: 500; color: #F0EFEA; }
+    .unit-type-desc { font-size: 11px; color: #8A8A95; }
+    .unit-fcfa { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 700; color: #C8371A; min-width: 130px; }
+    .unit-usd { font-size: 12px; color: #8A8A95; min-width: 70px; }
+    .unit-target { font-size: 11px; color: #8A8A95; background: #0A0A0F; padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+
+    /* Payment footer bar */
+    .pay-footer {
+      background: #0A0A0F; border-top: 1px solid #2A2A35;
+      padding: 16px 28px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .pay-footer-label { font-size: 11px; font-weight: 600; color: #8A8A95; text-transform: uppercase; letter-spacing: .5px; }
+    .pay-chip {
+      padding: 5px 14px; background: #14141A; border: 1px solid #2A2A35; border-radius: 7px;
+      font-size: 11px; font-weight: 600; color: #F0EFEA; display: flex; align-items: center; gap: 5px;
+    }
+.pay-logo { height: 22px; width: auto; object-fit: contain; }
+.pay-logo-method { display: block; height: 28px; margin: 0 auto 4px; object-fit: contain; }
+.pay-footer-secure { margin-left: auto; font-size: 11px; color: #8A8A95; display: flex; align-items: center; gap: 5px; }
+.pay-footer-secure i { font-size: 14px; }
+
+    /* Footer */
+    .footer { background: #050508; color: #8A8A95; padding: 40px 28px 28px; border-top: 1px solid #2A2A35; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 32px; }
+    @media (max-width: 760px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+    .footer-logo { font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 700; color: #F0EFEA; margin-bottom: 10px; }
+    .footer-logo em { color: #f5a78d; font-style: normal; }
+    .footer-desc { font-size: 12px; line-height: 1.7; }
+    .footer-col h4 { font-size: 12px; font-weight: 700; color: #F0EFEA; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 14px; }
+    .footer-col a { display: block; font-size: 12px; color: #8A8A95; margin-bottom: 8px; transition: color .15s; cursor: pointer; }
+    .footer-col a:hover { color: #fff; }
+    .footer-bottom { border-top: 1px solid #2A2A35; padding-top: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .footer-bottom span { font-size: 11px; }
+
+    /* Modals */
+    .modal-backdrop { backdrop-filter: blur(8px); background: rgba(10,10,15,0.85); }
+    .modal-bg {
+      display: none; position: fixed; inset: 0; background: rgba(10,10,15,.85);
+      z-index: 500; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-bg.open, .modal-flex { display: flex; }
+    .modal {
+      background: #14141A; border: 1px solid #2A2A35; border-radius: 14px;
+      padding: 30px; max-width: 420px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,.6); position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 14px; right: 14px; background: #2A2A35; border: none;
+      border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center;
+      justify-content: center; color: #8A8A95; font-size: 16px; transition: .15s;
+    }
+    .modal-close:hover { background: #3A3A45; color: #F0EFEA; }
+    .modal-title { font-family: 'Sora', sans-serif; font-size: 17px; font-weight: 700; margin-bottom: 4px; color: #F0EFEA; }
+    .modal-sub { font-size: 13px; color: #8A8A95; margin-bottom: 22px; }
+    .modal-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 18px; background: #2A2A35; }
+    .modal-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2A2A35; font-size: 13px; }
+    .modal-row:last-of-type { border: none; }
+    .modal-row-label { color: #8A8A95; }
+    .modal-row-val { font-weight: 500; color: #F0EFEA; }
+    .modal-total { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #C8371A; }
+    .pay-methods { display: flex; gap: 8px; margin: 18px 0 14px; flex-wrap: wrap; }
+    .pay-method {
+      flex: 1; min-width: 90px; padding: 10px 6px; background: #0A0A0F;
+      border: 1.5px solid #2A2A35; border-radius: 9px; font-size: 11px;
+      font-weight: 600; color: #8A8A95; text-align: center; cursor: pointer; transition: .15s;
+    }
+    .pay-method:hover, .pay-method.active { border-color: #C8371A; color: #fff; background: #C8371A; }
+    .pay-method img { display: block; height: 28px; margin: 0 auto 4px; object-fit: contain; }
+    .btn-pay {
+      width: 100%; padding: 13px; background: #C8371A; color: #fff; border: none;
+      border-radius: 9px; font-size: 14px; font-weight: 700; font-family: inherit;
+      transition: .18s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-pay:hover { background: #A52D16; }
+
+    /* Auth modal */
+    .auth-tabs { display: flex; gap: 0; border-bottom: 1px solid #2A2A35; margin-bottom: 20px; }
+    .auth-tab {
+      flex: 1; text-align: center; padding: 12px; font-size: 13px; font-weight: 500;
+      color: #8A8A95; cursor: pointer; border-bottom: 2px solid transparent; transition: .15s;
+    }
+    .auth-tab.active { color: #C8371A; border-bottom-color: #C8371A; font-weight: 600; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { font-size: 12px; font-weight: 500; color: #F0EFEA; display: block; margin-bottom: 5px; }
+    .form-group input {
+      width: 100%; padding: 10px 14px; border: 1.5px solid #2A2A35; border-radius: 8px;
+      font-size: 13px; font-family: inherit; color: #F0EFEA; background: #0A0A0F; outline: none; transition: .18s;
+    }
+    .form-group input:focus { border-color: #C8371A; box-shadow: 0 0 0 3px rgba(200,55,26,.1); }
+    .form-group input::placeholder { color: #5A5A65; }
+    .btn-auth {
+      width: 100%; padding: 12px; background: #C8371A; color: #fff; border: none;
+      border-radius: 9px; font-size: 14px; font-weight: 600; font-family: inherit;
+      margin-top: 6px; transition: .18s;
+    }
+    .btn-auth:hover { background: #A52D16; }
+    .auth-sep { text-align: center; font-size: 12px; color: #8A8A95; margin: 14px 0; }
+
+    /* Lightbox */
+    #lightboxModal .lb-img {
+      max-width: 95vw; max-height: 90vh; object-fit: contain;
+      border-radius: 8px; box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+    }
+    #lightboxModal .lb-watermark::after {
+      content: 'yétou'; font-family: 'Sora', sans-serif; font-size: 3rem; font-weight: 700;
+      color: rgba(255,255,255,0.15); text-transform: lowercase; letter-spacing: 0.3em;
+      transform: rotate(-15deg); text-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+    .play-btn {
+      width: 50px; height: 50px; background: rgba(200,55,26,.92); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; cursor: pointer;
+    }
+    .play-btn:hover { transform: scale(1.1); background: #C8371A; }
+
+    /* Video locked overlay */
+    .video-locked-overlay {
+      position: absolute; inset: 0; background: rgba(10,10,15,0.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 20; backdrop-filter: blur(4px);
+    }
+    .video-locked-overlay .lock-icon {
+      width: 64px; height: 64px; background: rgba(200,55,26,.2);
+      border: 2px solid rgba(200,55,26,.5); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;
+    }
+    .video-locked-overlay p { color: #8A8A95; font-size: 0.875rem; margin-bottom: 1rem; text-align: center; padding: 0 1rem; }
+    .video-locked-overlay .buy-btn {
+      background: linear-gradient(135deg, #C8371A, #A52D16); color: white;
+      padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem;
+      cursor: pointer; border: none; transition: all 0.3s ease;
+    }
+    .video-locked-overlay .buy-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(200,55,26,.4); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 30px; right: 30px; background: #14141A; color: #F0EFEA;
+      padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.5);
+      z-index: 1000; transform: translateY(80px); opacity: 0; transition: .3s ease;
+      border: 1px solid #2A2A35;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast i { font-size: 18px; color: #22c55e; }
+
+    /* Mobile menu */
+    #mobileMenu { display: none; background: #14141A; border-bottom: 1px solid #2A2A35; }
+    #mobileMenu.open { display: block; }
+    #mobileMenu a { display: block; padding: 12px 16px; color: #8A8A95; border-bottom: 1px solid #2A2A35; }
+    #mobileMenu a:hover { color: #fff; background: #1A1A25; }
+
+    /* Animations */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in { animation: fadeInUp 0.6s ease-out forwards; }
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+
+    /* =========================================================
+       RESPONSIVE MOBILE — ajustements complémentaires
+       ========================================================= */
+    @media (max-width: 640px) {
+      /* Base */
+      body { font-size: 15px; }
+
+      /* Navbar */
+      .navbar { height: 60px; padding: 0 12px; gap: 8px; }
+      .logo { font-size: 18px; }
+      .logo span { display: none; }
+      .nav-search input { padding: 10px 14px 10px 38px; font-size: 14px; }
+      .mobile-menu-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+      .mobile-menu-btn:active { background: #1A1A25; }
+      .nav-primary-text { display: none; }
+
+      /* Mobile menu */
+      #mobileMenu a { padding: 14px 16px; font-size: 14px; }
+
+      /* Hero */
+      .hero { height: auto; min-height: 420px; padding: 60px 0 70px; }
+      .hero-content { padding: 0 18px; max-width: 100%; }
+      .hero-eyebrow { font-size: 10px; padding: 4px 12px; margin-bottom: 14px; }
+      .hero h1 { font-size: 28px; letter-spacing: -.5px; margin-bottom: 14px; }
+      .hero p { font-size: 15px; margin-bottom: 22px; padding: 0 4px; }
+      .hero-search { flex-direction: column; border-radius: 14px; max-width: 100%; }
+      .hero-search-field { width: 100%; }
+      .hero-search-field i { padding: 0 16px; position: absolute; left: 0; top: 0; height: 52px; display: flex; align-items: center; pointer-events: none; }
+      .hero-search input { padding: 14px 16px 14px 46px; width: 100%; font-size: 15px; }
+      .hero-search button { width: 100%; padding: 14px; border-radius: 0 0 13px 13px; font-size: 15px; }
+      .hero-tags { gap: 8px; }
+      .hero-tag { font-size: 12px; padding: 6px 12px; }
+
+      /* Stats bar */
+      .stats-bar { justify-content: flex-start; padding: 4px 12px; gap: 8px; }
+      .stat-item { padding: 12px 18px; gap: 8px; }
+      .stat-icon { width: 32px; height: 32px; }
+      .stat-num { font-size: 15px; }
+      .stat-lbl { font-size: 10px; }
+
+      /* Activity bar */
+      .activity-bar { padding: 10px 14px; gap: 16px; overflow-x: auto; }
+      .activity-bar::-webkit-scrollbar { display: none; }
+      .activity-secure { margin-left: 0; }
+
+      /* Section tabs */
+      .section-tabs { padding: 0 12px; overflow-x: auto; }
+      .section-tabs::-webkit-scrollbar { display: none; }
+      .stab { padding: 14px 18px; font-size: 13px; }
+
+      /* Content */
+      .content { padding: 18px 14px; }
+
+      /* Filter bar */
+      .filter-bar { flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding-bottom: 8px; margin-bottom: 18px; }
+      .filter-bar::-webkit-scrollbar { height: 4px; }
+      .filter-bar::-webkit-scrollbar-thumb { background: #2A2A35; border-radius: 2px; }
+      .filter-group { flex-wrap: nowrap; }
+      .filter-label { font-size: 11px; }
+      .chip { padding: 7px 14px; font-size: 12px; }
+      .filter-sep { flex-shrink: 0; }
+      .sort-select { margin-left: 0; flex-shrink: 0; padding: 8px 12px; }
+
+      /* Section header */
+      .section-hd { flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 14px; }
+      .section-hd h2 { font-size: 16px; }
+
+      /* Photo grid */
+      .photo-grid { gap: 10px; margin-bottom: 28px; }
+      .photo-item { margin-bottom: 10px; border-radius: 10px; }
+      /* Sur mobile : overlay toujours visible en partie pour le prix + bouton */
+      .photo-overlay {
+        opacity: 1;
+        background: linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.2) 50%, transparent 100%);
+        padding: 12px;
+      }
+      .photo-info-title { font-size: 13px; white-space: normal; line-height: 1.35; }
+      .photo-info-sub { font-size: 10px; margin-bottom: 8px; white-space: normal; line-height: 1.35; }
+      .photo-price { font-size: 15px; }
+      .btn-buy-sm { padding: 7px 14px; font-size: 12px; min-height: 32px; }
+      .watermark-sm { font-size: 10px; }
+
+      /* Video grid */
+      .video-grid { gap: 14px; margin-bottom: 28px; }
+      .video-card { border-radius: 12px; }
+      .video-body { padding: 12px 14px; }
+      .video-title { font-size: 14px; }
+      .video-sub { font-size: 11px; }
+      .video-price { font-size: 18px; }
+      .btn-buy { padding: 10px 16px; font-size: 13px; min-height: 40px; }
+      .video-play { width: 46px; height: 46px; }
+
+      /* Tarifs */
+      .tarifs-wrap { padding: 36px 14px; }
+      .tarifs-header { margin-bottom: 28px; }
+      .tarifs-header h2 { font-size: 22px; }
+      .tarifs-header p { font-size: 13px; padding: 0 8px; }
+      .plans-grid { gap: 14px; margin-bottom: 32px; }
+      .plan { padding: 24px 18px; }
+      .plan-price { font-size: 26px; }
+
+      /* Unit table -> cards sur mobile */
+      .unit-table-header { padding: 16px 18px; }
+      .unit-row.head { display: none; }
+      .unit-row {
+        flex-direction: column; align-items: flex-start; gap: 10px;
+        padding: 16px 18px; border-bottom: 1px solid #2A2A35;
+      }
+      .unit-type { width: 100%; }
+      .unit-fcfa, .unit-usd, .unit-target { min-width: auto; width: 100%; }
+      .unit-fcfa { font-size: 16px; }
+      .unit-usd { font-size: 12px; }
+      .unit-target { display: inline-block; width: auto; }
+
+      /* Payment footer */
+      .pay-footer { padding: 14px; gap: 10px; }
+      .pay-footer-label { width: 100%; margin-bottom: 2px; }
+      .pay-chip { padding: 6px 12px; font-size: 12px; }
+      .pay-footer-secure { width: 100%; margin-left: 0; margin-top: 4px; font-size: 10px; }
+
+      /* Footer */
+      .footer { padding: 32px 18px 24px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+      .footer-logo { font-size: 22px; }
+      .footer-desc { font-size: 13px; }
+      .footer-col h4 { font-size: 13px; margin-bottom: 12px; }
+      .footer-col a { font-size: 13px; margin-bottom: 9px; }
+      .footer-bottom { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .footer-bottom span { font-size: 11px; }
+
+      /* Modals */
+      .modal-bg { padding: 12px; align-items: flex-end; }
+      .modal { padding: 22px 18px; border-radius: 16px 16px 0 0; max-width: 100%; }
+      .modal-title { font-size: 18px; }
+      .modal-sub { font-size: 13px; }
+      .pay-methods { gap: 8px; }
+      .pay-method { min-width: calc(50% - 4px); padding: 12px 4px; font-size: 12px; }
+      .btn-pay { padding: 14px; font-size: 15px; min-height: 48px; }
+      .modal-preview { height: 140px; }
+
+      /* Auth modal */
+      .auth-tabs { margin-bottom: 18px; }
+      .auth-tab { font-size: 14px; padding: 14px; }
+      .form-group input { padding: 12px 14px; font-size: 15px; min-height: 46px; }
+      .btn-auth { padding: 14px; font-size: 15px; min-height: 48px; }
+
+      /* Lightbox */
+      #lightboxModal .lb-img { max-width: 100vw; max-height: 80vh; border-radius: 0; }
+      #lightboxModal .lb-watermark::after { font-size: 2rem; }
+      #lightboxModal button { top: 12px; right: 12px; }
+      #lightboxModal .absolute.bottom-4 { flex-direction: column; align-items: flex-start; gap: 12px; }
+
+      /* Video preview modal */
+      #videoPreviewModal .max-w-4xl { border-radius: 16px 16px 0 0; max-height: 95vh; }
+      #previewVideo { max-height: 42vh; }
+      #vidDownloadLock .lock-icon { width: 54px; height: 54px; }
+      #vidDownloadLock p { font-size: 13px; }
+      #vidDownloadLock .buy-btn { padding: 12px 20px; font-size: 14px; }
+
+      /* Toast */
+      .toast { left: 14px; right: 14px; bottom: 14px; padding: 14px 16px; font-size: 14px; }
+    }
+
+    @media (max-width: 380px) {
+      .hero h1 { font-size: 24px; }
+      .hero p { font-size: 14px; }
+      .stat-item { padding: 10px 12px; }
+      .stat-icon { width: 28px; height: 28px; }
+      .stat-num { font-size: 13px; }
+      .stat-lbl { font-size: 9px; }
+      .stab { padding: 12px 14px; font-size: 12px; }
+      .chip { padding: 6px 11px; font-size: 11px; }
+      .plan-price { font-size: 22px; }
+      .pay-method { min-width: calc(50% - 4px); font-size: 11px; }
+    }
+
+    /* Très grands écrans : améliorer l'utilisation de l'espace */
+    @media (min-width: 1600px) {
+      .photo-grid { columns: 5; }
+      .video-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="logo">yé<em>tou</em><span>by Best Aero Drone · Gabon</span></div>
+
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="ntab-photos" onclick="switchTab('photos')">
+      <i class="ti ti-photo"></i> Photos
+    </button>
+    <button class="nav-tab" id="ntab-videos" onclick="switchTab('videos')">
+      <i class="ti ti-video"></i> Vidéos
+    </button>
+    <button class="nav-tab" id="ntab-tarifs" onclick="switchTab('tarifs')">
+      <i class="ti ti-tag"></i> Tarifs
+    </button>
+  </div>
+
+  <div class="nav-search">
+    <i class="ti ti-search"></i>
+    <input type="text" id="nav-search-input" placeholder="Paysages, Libreville, fleuves…" oninput="liveSearch(this.value)">
+  </div>
+
+  <div class="nav-right">
+    <button class="btn-ghost" onclick="openAuthModal('login')">Connexion</button>
+    <button class="btn-primary" onclick="openAuthModal('register')">
+      <i class="ti ti-user-plus"></i> <span class="nav-primary-text">Créer un compte</span>
+    </button>
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="ti ti-menu-2"></i></button>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div id="mobileMenu">
+  <a onclick="switchTab('photos');toggleMobileMenu()">Photos</a>
+  <a onclick="switchTab('videos');toggleMobileMenu()">Vidéos</a>
+  <a onclick="switchTab('tarifs');toggleMobileMenu()">Tarifs</a>
+  <a onclick="openAuthModal('login');toggleMobileMenu()">Connexion</a>
+  <a onclick="openAuthModal('register');toggleMobileMenu()">Créer un compte</a>
+</div>
+
+<!-- HERO -->
+<section class="hero hex-bg">
+  <div class="hero-gradient"></div>
+  <img class="hero-bg" src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1400&q=80&fit=crop" alt="Vue aérienne drone Gabon" onerror="this.style.display='none'">
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="animate-fade-in">
+      <div class="hero-eyebrow"><i class="ti ti-drone"></i> Médias  professionnels — <strong>Gabon</strong></div>
+      <h1>Le Gabon en <em>HD </em><br></h1>
+      <p>Images et vidéos haute définition — paysages, culture, nature, événements gabonais</p>
+    </div>
+    <div class="animate-fade-in delay-100">
+      <div class="hero-search">
+        <div class="hero-search-field">
+          <i class="ti ti-search"></i>
+          <input type="text" id="hero-search-input" placeholder="Rechercher : Libreville, Ogooué, forêt équatoriale, fête nationale…" oninput="liveSearch(this.value)">
+        </div>
+        <button onclick="liveSearch(document.getElementById('hero-search-input').value)">Rechercher</button>
+      </div>
+    </div>
+    <div class="animate-fade-in delay-200 hero-tags">
+      <span class="hero-tag" onclick="quickFilter('paysages')">Paysages</span>
+      <span class="hero-tag" onclick="quickFilter('libreville')">Libreville</span>
+      <span class="hero-tag" onclick="quickFilter('ogooué')">Ogooué</span>
+      <span class="hero-tag" onclick="quickFilter('forêt')">Forêt équatoriale</span>
+      <span class="hero-tag" onclick="quickFilter('culture')">Culture & traditions</span>
+      <span class="hero-tag" onclick="quickFilter('côte')">Côte atlantique</span>
+      <span class="hero-tag" onclick="quickFilter('4K')">4K uniquement</span>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-icon"><i class="ti ti-photo"></i></div>
+    <div><div class="stat-num" id="stat-photos">248</div><div class="stat-lbl">Photos disponibles</div></div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-icon"><i class="ti ti-video"></i></div>
+    <div><div class="stat-num" id="stat-videos">94</div><div class="stat-lbl">Vidéos disponibles</div></div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-icon"><i class="ti ti-map-pin"></i></div>
+    <div><div class="stat-num">9</div><div class="stat-lbl">Provinces du Gabon</div></div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-icon"><i class="ti ti-shield-check"></i></div>
+    <div><div class="stat-num">100%</div><div class="stat-lbl">Droits commerciaux inclus</div></div>
+  </div>
+</div>
+
+<!-- ACTIVITY TICKER -->
+<div class="activity-bar">
+  <div class="activity-item"><div class="activity-dot"></div>ag***lib a acheté une photo il y a 4 min</div>
+  <div class="activity-item"><div class="activity-dot"></div>me***gab s'est abonné il y a 11 min</div>
+  <div class="activity-item"><div class="activity-dot"></div>pr***bvl a téléchargé une vidéo 4K il y a 18 min</div>
+  <div class="activity-secure"><i class="ti ti-lock"></i> Paiements sécurisés — Airtel Money · Moov Money · Visa · Mastercard</div>
+</div>
+
+<!-- SECTION TABS -->
+<div class="section-tabs">
+  <div class="stab active" id="stab-photos" onclick="switchTab('photos')">
+    <i class="ti ti-photo"></i> Photos <span class="badge" id="badge-photos">248</span>
+  </div>
+  <div class="stab" id="stab-videos" onclick="switchTab('videos')">
+    <i class="ti ti-video"></i> Vidéos <span class="badge" id="badge-videos">94</span>
+  </div>
+  <div class="stab" id="stab-tarifs" onclick="switchTab('tarifs')">
+    <i class="ti ti-tag"></i> Tarifs & abonnements
+  </div>
+</div>
+
+<!-- PANEL PHOTOS -->
+<div class="panel active" id="panel-photos">
+  <div class="content">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Catégorie :</span>
+        <button class="chip active" data-pcat="all" onclick="filterPhotos(this,'cat')">Toutes</button>
+        <button class="chip" data-pcat="paysages" onclick="filterPhotos(this,'cat')">Paysages</button>
+        <button class="chip" data-pcat="nature" onclick="filterPhotos(this,'cat')">Nature & fleuves</button>
+        <button class="chip" data-pcat="culture" onclick="filterPhotos(this,'cat')">Culture</button>
+        <button class="chip" data-pcat="events" onclick="filterPhotos(this,'cat')">Événements</button>
+        <button class="chip" data-pcat="archi" onclick="filterPhotos(this,'cat')">Architecture</button>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-group">
+        <span class="filter-label">Résolution :</span>
+        <button class="chip active" data-pres="all" onclick="filterPhotos(this,'res')">Toutes</button>
+        <button class="chip" data-pres="hd" onclick="filterPhotos(this,'res')">HD 1080p — 1 500 FCFA</button>
+        <button class="chip" data-pres="4k" onclick="filterPhotos(this,'res')">4K — 3 000 FCFA</button>
+      </div>
+      <select class="sort-select" onchange="sortPhotos(this.value)">
+        <option value="recent">Plus récents</option>
+        <option value="price-asc">Prix croissant</option>
+        <option value="price-desc">Prix décroissant</option>
+        <option value="popular">Populaires</option>
+      </select>
+    </div>
+
+    <div class="section-hd">
+      <h2>Photos disponibles <span id="photo-count" style="font-size:13px;color:#8A8A95;font-weight:400"></span></h2>
+      <span onclick="switchTab('tarifs')">Voir les tarifs →</span>
+    </div>
+
+    <div class="photo-grid" id="photo-grid">
+
+      <div class="photo-item" data-pcat="paysages" data-pres="4k" data-ptitle="Estuaire du Gabon" data-photo-index="0" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1518623489648-a173ef7824f3?w=700&q=80&fit=crop" alt="Estuaire du Gabon" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag k4">4K</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Estuaire du Gabon — panoramique</div>
+          <div class="photo-info-sub">8 000 × 5 333 px · RAW + JPEG · Paysages</div>
+          <div class="photo-action">
+            <div class="photo-price">3 000 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Estuaire du Gabon','3 000','4K · RAW + JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="nature" data-pres="4k" data-ptitle="Forêt équatoriale Ogooué" data-photo-index="1" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=700&q=80&fit=crop" alt="Forêt équatoriale" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag k4">4K</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Forêt équatoriale — Ogooué</div>
+          <div class="photo-info-sub">8 000 × 5 333 px · RAW + JPEG · Nature</div>
+          <div class="photo-action">
+            <div class="photo-price">3 000 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Forêt équatoriale — Ogooué','3 000','4K · RAW + JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="archi" data-pres="hd" data-ptitle="Libreville by night" data-photo-index="2" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=700&q=80&fit=crop" alt="Libreville by night" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag">HD</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Libreville by night — Port</div>
+          <div class="photo-info-sub">6 000 × 4 000 px · JPEG · Architecture</div>
+          <div class="photo-action">
+            <div class="photo-price">1 500 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Libreville by night','1 500','HD · JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="nature" data-pres="hd" data-ptitle="Côte Atlantique Gabon" data-photo-index="3" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=700&q=80&fit=crop" alt="Côte atlantique" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag">HD</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Côte atlantique — plage sauvage</div>
+          <div class="photo-info-sub">6 000 × 4 000 px · JPEG · Nature</div>
+          <div class="photo-action">
+            <div class="photo-price">1 500 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Côte atlantique gabonaise','1 500','HD · JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="paysages" data-pres="4k" data-ptitle="Lagune Fernan Vaz" data-photo-index="4" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=700&q=80&fit=crop" alt="Lagune Fernan Vaz" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag k4">4K</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Lagune Fernan Vaz — coucher de soleil</div>
+          <div class="photo-info-sub">8 000 × 5 333 px · RAW · Paysages</div>
+          <div class="photo-action">
+            <div class="photo-price">3 000 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Lagune Fernan Vaz','3 000','4K · RAW',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="culture" data-pres="hd" data-ptitle="Village traditionnel Haut-Ogooué" data-photo-index="5" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=700&q=80&fit=crop" alt="Village traditionnel" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag">HD</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Village traditionnel — Haut-Ogooué</div>
+          <div class="photo-info-sub">6 000 × 4 000 px · JPEG · Culture</div>
+          <div class="photo-action">
+            <div class="photo-price">1 500 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Village traditionnel Haut-Ogooué','1 500','HD · JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="archi" data-pres="4k" data-ptitle="Pont de l'Ogooué" data-photo-index="6" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=700&q=80&fit=crop" alt="Architecture aérienne" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag k4">4K</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Pont de l'Ogooué — vue aérienne 4K</div>
+          <div class="photo-info-sub">8 000 × 5 333 px · RAW · Architecture</div>
+          <div class="photo-action">
+            <div class="photo-price">3 000 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy(\"Pont de l'Ogooué\",'3 000','4K · RAW',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="paysages" data-pres="hd" data-ptitle="Parc national Lopé" data-photo-index="7" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1511497584788-876760111969?w=700&q=80&fit=crop" alt="Parc national Lopé" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag">HD</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Parc national Lopé — survol drone</div>
+          <div class="photo-info-sub">6 000 × 4 000 px · JPEG · Paysages</div>
+          <div class="photo-action">
+            <div class="photo-price">1 500 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Parc national Lopé','1 500','HD · JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="events" data-pres="hd" data-ptitle="Fête nationale Gabon" data-photo-index="8" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=700&q=80&fit=crop" alt="Événement Gabon" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag">HD</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Fête nationale — stade, survol</div>
+          <div class="photo-info-sub">6 000 × 4 000 px · JPEG · Événements</div>
+          <div class="photo-action">
+            <div class="photo-price">1 500 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Fête nationale Gabon','1 500','HD · JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="nature" data-pres="4k" data-ptitle="Fleuve Gabon mangroves" data-photo-index="9" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=700&q=80&fit=crop" alt="Mangroves Gabon" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag k4">4K</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Mangroves gabonaises — delta</div>
+          <div class="photo-info-sub">8 000 × 5 333 px · RAW · Nature</div>
+          <div class="photo-action">
+            <div class="photo-price">3 000 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Mangroves gabonaises','3 000','4K · RAW',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="culture" data-pres="hd" data-ptitle="Marché de Libreville" data-photo-index="10" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=700&q=80&fit=crop" alt="Marché de Libreville" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag">HD</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Marché de Libreville — vue aérienne</div>
+          <div class="photo-info-sub">6 000 × 4 000 px · JPEG · Culture</div>
+          <div class="photo-action">
+            <div class="photo-price">1 500 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Marché de Libreville','1 500','HD · JPEG',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="photo-item" data-pcat="paysages" data-pres="4k" data-ptitle="Baie de Corisco Gabon" data-photo-index="11" onclick="openLightboxFromCard(this)">
+        <img src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=700&q=80&fit=crop" alt="Baie de Corisco" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+        <div class="photo-tag k4">4K</div>
+        <div class="watermark-sm">yétou</div>
+        <div class="photo-overlay">
+          <div class="photo-info-title">Baie de Corisco — eaux turquoise</div>
+          <div class="photo-info-sub">8 000 × 5 333 px · RAW · Paysages</div>
+          <div class="photo-action">
+            <div class="photo-price">3 000 <small>FCFA</small></div>
+            <button class="btn-buy-sm" onclick="event.stopPropagation();openBuy('Baie de Corisco','3 000','4K · RAW',this.closest('.photo-item').querySelector('img').src)">Acheter</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="no-results" id="no-photos">
+      <i class="ti ti-photo-off"></i>
+      <p>Aucune photo ne correspond à votre recherche.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL VIDÉOS -->
+<div class="panel" id="panel-videos">
+  <div class="content">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Catégorie :</span>
+        <button class="chip active" data-vcat="all" onclick="filterVideos(this,'cat')">Toutes</button>
+        <button class="chip" data-vcat="paysages" onclick="filterVideos(this,'cat')">Paysages</button>
+        <button class="chip" data-vcat="nature" onclick="filterVideos(this,'cat')">Nature</button>
+        <button class="chip" data-vcat="events" onclick="filterVideos(this,'cat')">Événements</button>
+        <button class="chip" data-vcat="archi" onclick="filterVideos(this,'cat')">Architecture</button>
+        <button class="chip" data-vcat="culture" onclick="filterVideos(this,'cat')">Culture</button>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="filter-group">
+        <span class="filter-label">Durée :</span>
+        <button class="chip active" data-vdur="all" onclick="filterVideos(this,'dur')">Toutes</button>
+        <button class="chip" data-vdur="30" onclick="filterVideos(this,'dur')">30 sec — 5 000 FCFA</button>
+        <button class="chip" data-vdur="60" onclick="filterVideos(this,'dur')">1 min — 10 000 FCFA</button>
+      </div>
+      <select class="sort-select" onchange="sortVideos(this.value)">
+        <option value="recent">Plus récents</option>
+        <option value="price-asc">Prix croissant</option>
+        <option value="price-desc">Prix décroissant</option>
+        <option value="popular">Populaires</option>
+      </select>
+    </div>
+
+    <div class="section-hd">
+      <h2>Vidéos disponibles <span id="video-count" style="font-size:13px;color:#8A8A95;font-weight:400"></span></h2>
+      <span onclick="switchTab('tarifs')">Voir les tarifs →</span>
+    </div>
+
+    <div class="video-grid" id="video-grid">
+
+      <div class="video-card" data-vcat="paysages" data-vdur="30" data-vtitle="Estuaire du Gabon drone 4K" data-video-index="0">
+        <div class="video-thumb" onclick="openVideoPreview(0)">
+          <img src="https://images.unsplash.com/photo-1518623489648-a173ef7824f3?w=700&q=80&fit=crop" alt="Estuaire du Gabon" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">0:30</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Estuaire du Gabon — drone 4K</div>
+          <div class="video-sub">4K UHD · 30 sec · MP4 · Paysages</div>
+          <div class="video-footer">
+            <div class="video-price">5 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Estuaire du Gabon (vidéo 30s)','5 000','4K UHD · 30 sec · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="nature" data-vdur="60" data-vtitle="Forêt équatoriale Ogooué survol" data-video-index="1">
+        <div class="video-thumb" onclick="openVideoPreview(1)">
+          <img src="https://images.unsplash.com/photo-1448375240586-882707db888b?w=700&q=80&fit=crop" alt="Forêt équatoriale" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">1:00</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Forêt équatoriale — survol Ogooué</div>
+          <div class="video-sub">4K UHD · 1 min · MP4 · Nature</div>
+          <div class="video-footer">
+            <div class="video-price">10 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Forêt équatoriale Ogooué (vidéo 1min)','10 000','4K UHD · 1 min · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="events" data-vdur="60" data-vtitle="Fête nationale Gabon survol stade" data-video-index="2">
+        <div class="video-thumb" onclick="openVideoPreview(2)">
+          <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=700&q=80&fit=crop" alt="Fête nationale Gabon" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">1:00</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Fête nationale Gabon — stade, 4K</div>
+          <div class="video-sub">4K UHD · 1 min · MP4 · Événements</div>
+          <div class="video-footer">
+            <div class="video-price">10 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Fête nationale Gabon (vidéo 1min)','10 000','4K UHD · 1 min · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="archi" data-vdur="30" data-vtitle="Libreville by night architecture" data-video-index="3">
+        <div class="video-thumb" onclick="openVideoPreview(3)">
+          <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=700&q=80&fit=crop" alt="Libreville by night" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">0:30</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Libreville by night — architecture</div>
+          <div class="video-sub">4K UHD · 30 sec · MP4 · Architecture</div>
+          <div class="video-footer">
+            <div class="video-price">5 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Libreville by night (vidéo 30s)','5 000','4K UHD · 30 sec · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="nature" data-vdur="30" data-vtitle="Côte atlantique Gabon vagues plage" data-video-index="4">
+        <div class="video-thumb" onclick="openVideoPreview(4)">
+          <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=700&q=80&fit=crop" alt="Côte atlantique Gabon" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">0:30</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Côte atlantique — vagues & plage</div>
+          <div class="video-sub">4K UHD · 30 sec · MP4 · Nature</div>
+          <div class="video-footer">
+            <div class="video-price">5 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Côte atlantique Gabon (vidéo 30s)','5 000','4K UHD · 30 sec · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="paysages" data-vdur="60" data-vtitle="Lagune Fernan Vaz coucher soleil" data-video-index="5">
+        <div class="video-thumb" onclick="openVideoPreview(5)">
+          <img src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=700&q=80&fit=crop" alt="Lagune Fernan Vaz" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">1:00</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Lagune Fernan Vaz — coucher de soleil</div>
+          <div class="video-sub">4K UHD · 1 min · MP4 · Paysages</div>
+          <div class="video-footer">
+            <div class="video-price">10 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Lagune Fernan Vaz (vidéo 1min)','10 000','4K UHD · 1 min · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="culture" data-vdur="30" data-vtitle="Culture traditionnelle Gabon drone" data-video-index="6">
+        <div class="video-thumb" onclick="openVideoPreview(6)">
+          <img src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=700&q=80&fit=crop" alt="Culture traditionnelle" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">0:30</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Culture gabonaise — village drone</div>
+          <div class="video-sub">4K UHD · 30 sec · MP4 · Culture</div>
+          <div class="video-footer">
+            <div class="video-price">5 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Culture gabonaise village (vidéo 30s)','5 000','4K UHD · 30 sec · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="nature" data-vdur="60" data-vtitle="Parc national Lopé faune" data-video-index="7">
+        <div class="video-thumb" onclick="openVideoPreview(7)">
+          <img src="https://images.unsplash.com/photo-1511497584788-876760111969?w=700&q=80&fit=crop" alt="Parc national Lopé" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">1:00</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Parc national Lopé — faune & forêt</div>
+          <div class="video-sub">4K UHD · 1 min · MP4 · Nature</div>
+          <div class="video-footer">
+            <div class="video-price">10 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Parc national Lopé (vidéo 1min)','10 000','4K UHD · 1 min · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-card" data-vcat="paysages" data-vdur="30" data-vtitle="Baie de Corisco eaux turquoise" data-video-index="8">
+        <div class="video-thumb" onclick="openVideoPreview(8)">
+          <img src="https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=700&q=80&fit=crop" alt="Baie de Corisco" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=700&q=80'">
+          <div class="watermark-sm">yétou</div>
+          <div class="video-play"><i class="ti ti-player-play"></i></div>
+          <div class="video-res">4K</div>
+          <div class="video-dur">0:30</div>
+        </div>
+        <div class="video-body">
+          <div class="video-title">Baie de Corisco — eaux turquoise</div>
+          <div class="video-sub">4K UHD · 30 sec · MP4 · Paysages</div>
+          <div class="video-footer">
+            <div class="video-price">5 000 <small>FCFA</small></div>
+            <button class="btn-buy" onclick="openBuy('Baie de Corisco (vidéo 30s)','5 000','4K UHD · 30 sec · MP4',this.closest('.video-card').querySelector('img').src)"><i class="ti ti-download"></i> Acheter</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="no-results" id="no-videos">
+      <i class="ti ti-video-off"></i>
+      <p>Aucune vidéo ne correspond à votre recherche.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL TARIFS -->
+<div class="panel" id="panel-tarifs">
+  <div class="tarifs-wrap">
+    <div class="tarifs-header">
+      <h2>Tarifs & abonnements</h2>
+      <p>Prix adaptés au marché gabonais — paiement sécurisé via Airtel Money, Moov Money, Visa, Mastercard</p>
+    </div>
+
+    <div class="plans-grid">
+      <div class="plan">
+        <div class="plan-icon"><i class="ti ti-photo"></i></div>
+        <div class="plan-name">Achat à l'unité</div>
+        <div class="plan-price">dès 1 500 <sub>FCFA</sub></div>
+        <div class="plan-usd">Sans abonnement · Sans engagement</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-feats">
+          <li><i class="ti ti-check"></i>Photo HD 1080p — 1 500 FCFA</li>
+          <li><i class="ti ti-check"></i>Photo 4K — 3 000 FCFA</li>
+          <li><i class="ti ti-check"></i>Vidéo 30 sec — 5 000 FCFA</li>
+          <li><i class="ti ti-check"></i>Vidéo 1 min — 10 000 FCFA</li>
+          <li><i class="ti ti-check"></i>Licence commerciale incluse</li>
+          <li><i class="ti ti-check"></i>Téléchargement immédiat</li>
+          <li class="off"><i class="ti ti-x"></i>Accès illimité</li>
+        </ul>
+        <button class="plan-cta outline" onclick="switchTab('photos')">Parcourir le catalogue</button>
+      </div>
+
+      <div class="plan featured">
+        <div class="plan-badge">⭐ Le plus populaire</div>
+        <div class="plan-icon"><i class="ti ti-crown"></i></div>
+        <div class="plan-name">Abonnement mensuel</div>
+        <div class="plan-price">15 000 <sub>FCFA/mois</sub></div>
+        <div class="plan-usd">~$25.00 par mois · Créatifs actifs</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-feats">
+          <li><i class="ti ti-check"></i>Téléchargements illimités</li>
+          <li><i class="ti ti-check"></i>Photos HD & 4K</li>
+          <li><i class="ti ti-check"></i>Licence commerciale</li>
+          <li><i class="ti ti-check"></i>Accès aux nouveautés en priorité</li>
+          <li><i class="ti ti-check"></i>Historique & factures</li>
+          <li class="off"><i class="ti ti-x"></i>Vidéos 4K incluses</li>
+          <li class="off"><i class="ti ti-x"></i>Facture entreprise</li>
+        </ul>
+        <button class="plan-cta solid" onclick="selectPlan('monthly')">Commencer maintenant</button>
+      </div>
+
+      <div class="plan">
+        <div class="plan-icon"><i class="ti ti-building"></i></div>
+        <div class="plan-name">Abonnement professionnel</div>
+        <div class="plan-price">50 000 <sub>FCFA/mois</sub></div>
+        <div class="plan-usd">~$85.00 par mois · PME & Agences</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-feats">
+          <li><i class="ti ti-check"></i>Photos HD & 4K illimitées</li>
+          <li><i class="ti ti-check"></i>Vidéos 4K incluses</li>
+          <li><i class="ti ti-check"></i>Licence commerciale étendue</li>
+          <li><i class="ti ti-check"></i>Facture entreprise / ONG</li>
+          <li><i class="ti ti-check"></i>Support prioritaire</li>
+          <li><i class="ti ti-check"></i>Téléchargements RAW inclus</li>
+          <li><i class="ti ti-check"></i>Accès API (en développement)</li>
+        </ul>
+        <button class="plan-cta outline" onclick="selectPlan('pro')">Contacter l'équipe</button>
+      </div>
+    </div>
+
+    <div class="unit-table">
+      <div class="unit-table-header">
+        <h3>Grille tarifaire complète</h3>
+        <p>Prix indicatifs en FCFA et USD (taux de référence BEAC : 1 USD = 600 FCFA)</p>
+      </div>
+      <div class="unit-row head">
+        <span class="unit-type">Type de contenu</span>
+        <span class="unit-fcfa">Prix FCFA</span>
+        <span class="unit-usd">Prix USD</span>
+        <span class="unit-target">Cible</span>
+      </div>
+      <div class="unit-row">
+        <div class="unit-type"><i class="ti ti-photo"></i><div><div class="unit-type-name">Photo HD 1080p</div><div class="unit-type-desc">6 000 × 4 000 px · JPEG</div></div></div>
+        <div class="unit-fcfa">1 500 FCFA</div><div class="unit-usd">~$2.50</div><div class="unit-target">Particuliers</div>
+      </div>
+      <div class="unit-row">
+        <div class="unit-type"><i class="ti ti-photo"></i><div><div class="unit-type-name">Photo 4K</div><div class="unit-type-desc">8 000 × 5 333 px · RAW + JPEG</div></div></div>
+        <div class="unit-fcfa">3 000 FCFA</div><div class="unit-usd">~$5.00</div><div class="unit-target">Professionnels</div>
+      </div>
+      <div class="unit-row">
+        <div class="unit-type"><i class="ti ti-video"></i><div><div class="unit-type-name">Vidéo drone — 30 secondes</div><div class="unit-type-desc">4K UHD · MP4 · H.264</div></div></div>
+        <div class="unit-fcfa">5 000 FCFA</div><div class="unit-usd">~$8.50</div><div class="unit-target">Agences / Médias</div>
+      </div>
+      <div class="unit-row">
+        <div class="unit-type"><i class="ti ti-video"></i><div><div class="unit-type-name">Vidéo drone — 1 minute</div><div class="unit-type-desc">4K UHD · MP4 · H.264</div></div></div>
+        <div class="unit-fcfa">10 000 FCFA</div><div class="unit-usd">~$17.00</div><div class="unit-target">Entreprises</div>
+      </div>
+      <div class="unit-row highlight">
+        <div class="unit-type"><i class="ti ti-star" style="color:#C8371A"></i><div><div class="unit-type-name" style="color:#C8371A">Abonnement mensuel</div><div class="unit-type-desc">Photos illimitées HD & 4K</div></div></div>
+        <div class="unit-fcfa">15 000 FCFA</div><div class="unit-usd">~$25.00</div><div class="unit-target">Créatifs actifs</div>
+      </div>
+      <div class="unit-row highlight">
+        <div class="unit-type"><i class="ti ti-crown" style="color:#C8371A"></i><div><div class="unit-type-name" style="color:#C8371A">Abonnement professionnel</div><div class="unit-type-desc">Photos + Vidéos illimitées</div></div></div>
+        <div class="unit-fcfa">50 000 FCFA</div><div class="unit-usd">~$85.00</div><div class="unit-target">PME / Agences</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT FOOTER BAR -->
+<div class="pay-footer">
+  <span class="pay-footer-label">Paiements acceptés</span>
+  <div class="pay-chip"><img class="pay-logo" src="yetoupx/src/logo/airtel.png" alt="Airtel Money"> Airtel Money</div>
+  <div class="pay-chip"><img class="pay-logo" src="yetoupx/src/logo/moov.png" alt="Moov Money"> Moov Money</div>
+  <div class="pay-chip"><img class="pay-logo" src="yetoupx/public/visa.svg" alt="Visa"> Visa</div>
+  <div class="pay-chip"><img class="pay-logo" src="yetoupx/public/mastercard.svg" alt="Mastercard"> Mastercard</div>
+  <div class="pay-footer-secure"><i class="ti ti-lock"></i> Paiements 100% sécurisés · Téléchargement immédiat après validation</div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">yé<em>tou</em></div>
+      <p class="footer-desc">
+        Plateforme de vente de médias aériens HD & 4K,<br>
+        développée par Best Aero Drone · Libreville, Gabon.<br>
+        Paysages, culture, nature et événements gabonais<br>
+        capturés par drone professionnel.
+      </p>
+    </div>
+    <div class="footer-col">
+      <h4>Catalogue</h4>
+      <a onclick="switchTab('photos');filterPhotos(document.querySelector('[data-pcat=paysages]'),'cat')">Paysages</a>
+      <a onclick="switchTab('photos');filterPhotos(document.querySelector('[data-pcat=nature]'),'cat')">Nature & fleuves</a>
+      <a onclick="switchTab('photos');filterPhotos(document.querySelector('[data-pcat=culture]'),'cat')">Culture</a>
+      <a onclick="switchTab('photos');filterPhotos(document.querySelector('[data-pcat=events]'),'cat')">Événements</a>
+      <a onclick="switchTab('videos')">Vidéos 4K</a>
+    </div>
+    <div class="footer-col">
+      <h4>Compte</h4>
+      <a onclick="openAuthModal('register')">Créer un compte</a>
+      <a onclick="openAuthModal('login')">Se connecter</a>
+      <a onclick="switchTab('tarifs')">Abonnements</a>
+      <a>Mes téléchargements</a>
+      <a>Mes factures</a>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <a>contact@bestaerogroup.com</a>
+      <a>Libreville, Gabon</a>
+      <a>+241 XX XX XX XX</a>
+      <a>Conditions d'utilisation</a>
+      <a>Politique de confidentialité</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Best Aero Drone · Tous droits réservés · Gabon</span>
+    <span>yétou — Plateforme de médias aériens HD</span>
+  </div>
+</footer>
+
+<!-- LIGHTBOX MODAL -->
+<div id="lightboxModal" class="fixed inset-0 z-[100] hidden">
+  <div class="modal-backdrop absolute inset-0" onclick="closeLightbox()"></div>
+  <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+    <div class="relative">
+      <img id="lbImage" src="" alt="" class="lb-img">
+      <div class="lb-watermark absolute inset-0 flex items-center justify-center pointer-events-none"></div>
+      <button onclick="closeLightbox()" class="absolute top-4 right-4 z-20 w-10 h-10 flex items-center justify-center text-yetou-muted hover:text-white transition-colors bg-yetou-card/90 rounded-full shadow-lg"><i class="ti ti-x text-lg"></i></button>
+      <div class="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+        <div>
+          <h3 id="lbTitle" class="font-sora font-semibold text-white text-sm"></h3>
+          <p id="lbDetails" class="text-yetou-muted text-xs"></p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="lbPrice" class="font-sora font-bold text-lg text-white"></div>
+          <button onclick="openPaymentFromLightbox()" class="px-4 py-2 bg-yetou-accent text-white rounded-lg hover:bg-yetou-accentHover transition-all text-sm font-medium flex items-center gap-2"><i class="ti ti-shopping-cart"></i> Acheter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIDEO PREVIEW MODAL -->
+<div id="videoPreviewModal" class="fixed inset-0 z-[100] hidden">
+  <div class="modal-backdrop absolute inset-0" onclick="closeVideoPreview()"></div>
+  <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-yetou-card border border-yetou-border rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden mx-4">
+      <div class="flex items-center justify-between p-4 border-b border-yetou-border">
+        <h3 id="vidModalTitle" class="font-sora font-semibold text-white text-sm sm:text-base"></h3>
+        <button onclick="closeVideoPreview()" class="w-8 h-8 flex items-center justify-center text-yetou-muted hover:text-white transition-colors"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="relative bg-black">
+        <video id="previewVideo" class="w-full max-h-[50vh] sm:max-h-[60vh] object-contain" controls playsinline muted loop></video>
+        <div class="watermark-overlay" style="position:absolute;"></div>
+        <div id="vidDownloadLock" class="video-locked-overlay" style="display:none;">
+          <div class="lock-icon"><i class="ti ti-lock text-yetou-accent text-xl"></i></div>
+          <p class="text-white font-medium text-base mb-1">Téléchargement verrouillé</p>
+          <p class="text-yetou-muted text-sm mb-4">Achetez cette vidéo pour la télécharger en qualité originale.</p>
+          <button class="buy-btn" onclick="openVideoPaymentFromPreview()"><i class="ti ti-shopping-cart mr-2"></i>Acheter maintenant</button>
+        </div>
+      </div>
+      <div class="p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+          <div>
+            <p id="vidModalDetails" class="text-yetou-muted text-sm mb-1"></p>
+            <div class="flex items-center gap-2">
+              <span id="vidModalFormat" class="text-xs bg-yetou-card border border-yetou-border px-2 py-0.5 rounded text-yetou-muted"></span>
+              <span id="vidModalDuration" class="text-xs bg-yetou-card border border-yetou-border px-2 py-0.5 rounded text-yetou-muted"></span>
+            </div>
+          </div>
+          <div class="text-left sm:text-right">
+            <div id="vidModalPrice" class="font-sora font-bold text-xl sm:text-2xl text-white"></div>
+            <p class="text-yetou-muted text-xs">Paiement sécurisé</p>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="openVideoPaymentFromPreview()" class="flex-1 py-3 bg-yetou-accent text-white rounded-lg hover:bg-yetou-accentHover transition-all text-sm font-medium flex items-center justify-center gap-2"><i class="ti ti-shopping-cart"></i> Acheter maintenant</button>
+          <button class="px-4 py-3 border border-yetou-border text-yetou-muted rounded-lg hover:text-white hover:border-yetou-accent transition-all"><i class="ti ti-heart"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="modal-bg" id="modal-buy">
+  <div class="modal">
+    <button class="modal-close" onclick="closeBuy()"><i class="ti ti-x"></i></button>
+    <div class="modal-title">Finaliser l'achat</div>
+    <div class="modal-sub" id="modal-sub-text">Sélectionner un moyen de paiement</div>
+    <img class="modal-preview" id="modal-preview-img" src="" alt="Aperçu média">
+    <div class="modal-row"><span class="modal-row-label">Média</span><span class="modal-row-val" id="modal-media-name"></span></div>
+    <div class="modal-row"><span class="modal-row-label">Format</span><span class="modal-row-val" id="modal-format"></span></div>
+    <div class="modal-row"><span class="modal-row-label">Licence</span><span class="modal-row-val">Commerciale · Illimitée · Gabon</span></div>
+    <div class="modal-row"><span class="modal-row-label">Total</span><span class="modal-total" id="modal-price"></span></div>
+    <div id="phone-field" class="form-group" style="margin-top:14px;display:none">
+      <label>Numéro de téléphone</label>
+      <input type="tel" id="client-phone" placeholder="Ex: 077 00 00 00">
+    </div>
+    <div class="pay-methods">
+      <div class="pay-method active" data-method="Airtel Money" onclick="selectPay(this)"><img class="pay-logo-method" src="yetoupx/src/logo/airtel.png" alt="Airtel Money"> Airtel Money</div>
+      <div class="pay-method" data-method="Moov Money" onclick="selectPay(this)"><img class="pay-logo-method" src="yetoupx/src/logo/moov.png" alt="Moov Money"> Moov Money</div>
+      <div class="pay-method" data-method="Visa" onclick="selectPay(this)"><img class="pay-logo-method" src="yetoupx/public/visa.svg" alt="Visa"> Visa</div>
+      <div class="pay-method" data-method="Mastercard" onclick="selectPay(this)"><img class="pay-logo-method" src="yetoupx/public/mastercard.svg" alt="Mastercard"> Mastercard</div>
+    </div>
+    <button class="btn-pay" onclick="confirmPay()"><i class="ti ti-lock"></i> Payer maintenant</button>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-bg" id="modal-auth">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAuthModal()"><i class="ti ti-x"></i></button>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="authTabLogin" onclick="switchAuthTab('login')">Connexion</div>
+      <div class="auth-tab" id="authTabRegister" onclick="switchAuthTab('register')">Créer un compte</div>
+    </div>
+    <div id="loginForm">
+      <div class="form-group"><label>Adresse email</label><input type="email" placeholder="votre@email.com"></div>
+      <div class="form-group"><label>Mot de passe</label><input type="password" placeholder="••••••••"></div>
+      <div class="flex items-center justify-between mb-4">
+        <label class="flex items-center gap-2 cursor-pointer text-xs text-yetou-muted">
+          <input type="checkbox" class="w-4 h-4 rounded border-yetou-border bg-yetou-darker text-yetou-accent"> Se souvenir de moi
+        </label>
+        <a href="#" class="text-yetou-accent text-xs hover:underline">Mot de passe oublié ?</a>
+      </div>
+      <button class="btn-auth" onclick="closeAuthModal();showToast('Connexion simulée avec succès')">Se connecter</button>
+      <div class="auth-sep">— ou —</div>
+      <button class="social-btn w-full mb-3" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:1px solid #2A2A35;border-radius:8px;background:transparent;color:#F0EFEA;">
+        <img src="yetoupx/src/logo/google.jpg" alt="Google" style="width:18px;height:18px"> Continuer avec Google
+      </button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="form-group"><label>Nom complet</label><input type="text" placeholder="Votre nom"></div>
+      <div class="form-group"><label>Adresse email</label><input type="email" placeholder="votre@email.com"></div>
+      <div class="form-group"><label>Mot de passe</label><input type="password" placeholder="8 caractères minimum"></div>
+      <div class="form-group"><label>Confirmer le mot de passe</label><input type="password" placeholder="••••••••"></div>
+      <label class="flex items-start gap-2 cursor-pointer text-xs text-yetou-muted mb-4">
+        <input type="checkbox" class="w-4 h-4 mt-0.5 rounded border-yetou-border bg-yetou-darker text-yetou-accent">
+        J'accepte les <a href="#" class="text-yetou-accent hover:underline">conditions d'utilisation</a> et la <a href="#" class="text-yetou-accent hover:underline">politique de confidentialité</a>
+      </label>
+      <button class="btn-auth" onclick="closeAuthModal();showToast('Compte créé avec succès ! Bienvenue sur yétou.')">Créer mon compte</button>
+      <div class="auth-sep">— ou —</div>
+      <button class="social-btn w-full mb-3" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:1px solid #2A2A35;border-radius:8px;background:transparent;color:#F0EFEA;">
+        <img src="yetoupx/src/logo/google.jpg" alt="Google" style="width:18px;height:18px"> S'inscrire avec Google
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><i class="ti ti-circle-check"></i><span id="toast-msg"></span></div>
+
+<script>
+// ─── DATA ───
+const photosData = [
+  { title: "Estuaire du Gabon — panoramique", details: "Photo 4K · 8 000 × 5 333 px · RAW + JPEG", format: "RAW + JPEG", price: "3 000 FCFA", img: "https://images.unsplash.com/photo-1518623489648-a173ef7824f3?w=1600&h=1200&fit=crop", pcat: "paysages", pres: "4k" },
+  { title: "Forêt équatoriale — Ogooué", details: "Photo 4K · 8 000 × 5 333 px · RAW + JPEG", format: "RAW + JPEG", price: "3 000 FCFA", img: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1600&h=1200&fit=crop", pcat: "nature", pres: "4k" },
+  { title: "Libreville by night — Port", details: "Photo HD · 6 000 × 4 000 px · JPEG", format: "JPEG", price: "1 500 FCFA", img: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1600&h=1200&fit=crop", pcat: "archi", pres: "hd" },
+  { title: "Côte atlantique — plage sauvage", details: "Photo HD · 6 000 × 4 000 px · JPEG", format: "JPEG", price: "1 500 FCFA", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&h=1200&fit=crop", pcat: "nature", pres: "hd" },
+  { title: "Lagune Fernan Vaz — coucher de soleil", details: "Photo 4K · 8 000 × 5 333 px · RAW", format: "RAW", price: "3 000 FCFA", img: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1600&h=1200&fit=crop", pcat: "paysages", pres: "4k" },
+  { title: "Village traditionnel — Haut-Ogooué", details: "Photo HD · 6 000 × 4 000 px · JPEG", format: "JPEG", price: "1 500 FCFA", img: "https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=1600&h=1200&fit=crop", pcat: "culture", pres: "hd" },
+  { title: "Pont de l'Ogooué — vue aérienne 4K", details: "Photo 4K · 8 000 × 5 333 px · RAW", format: "RAW", price: "3 000 FCFA", img: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1600&h=1200&fit=crop", pcat: "archi", pres: "4k" },
+  { title: "Parc national Lopé — survol drone", details: "Photo HD · 6 000 × 4 000 px · JPEG", format: "JPEG", price: "1 500 FCFA", img: "https://images.unsplash.com/photo-1511497584788-876760111969?w=1600&h=1200&fit=crop", pcat: "paysages", pres: "hd" },
+  { title: "Fête nationale — stade, survol", details: "Photo HD · 6 000 × 4 000 px · JPEG", format: "JPEG", price: "1 500 FCFA", img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1600&h=1200&fit=crop", pcat: "events", pres: "hd" },
+  { title: "Mangroves gabonaises — delta", details: "Photo 4K · 8 000 × 5 333 px · RAW", format: "RAW", price: "3 000 FCFA", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1600&h=1200&fit=crop", pcat: "nature", pres: "4k" },
+  { title: "Marché de Libreville — vue aérienne", details: "Photo HD · 6 000 × 4 000 px · JPEG", format: "JPEG", price: "1 500 FCFA", img: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=1600&h=1200&fit=crop", pcat: "culture", pres: "hd" },
+  { title: "Baie de Corisco — eaux turquoise", details: "Photo 4K · 8 000 × 5 333 px · RAW", format: "RAW", price: "3 000 FCFA", img: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1600&h=1200&fit=crop", pcat: "paysages", pres: "4k" }
+];
+
+const videosData = [
+  { title: "Estuaire du Gabon — drone 4K", details: "Vidéo 30s · 4K UHD · MP4 · 30fps", format: "MP4", duration: "0:30", price: "5 000 FCFA", img: "https://images.unsplash.com/photo-1518623489648-a173ef7824f3?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", vcat: "paysages", vdur: "30" },
+  { title: "Forêt équatoriale — survol Ogooué", details: "Vidéo 1min · 4K UHD · MP4 · 60fps", format: "MP4", duration: "1:00", price: "10 000 FCFA", img: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", vcat: "nature", vdur: "60" },
+  { title: "Fête nationale Gabon — stade, 4K", details: "Vidéo 1min · 4K UHD · MP4 · 60fps", format: "MP4", duration: "1:00", price: "10 000 FCFA", img: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4", vcat: "events", vdur: "60" },
+  { title: "Libreville by night — architecture", details: "Vidéo 30s · 4K UHD · MP4 · 30fps", format: "MP4", duration: "0:30", price: "5 000 FCFA", img: "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4", vcat: "archi", vdur: "30" },
+  { title: "Côte atlantique — vagues & plage", details: "Vidéo 30s · 4K UHD · MP4 · 30fps", format: "MP4", duration: "0:30", price: "5 000 FCFA", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4", vcat: "nature", vdur: "30" },
+  { title: "Lagune Fernan Vaz — coucher de soleil", details: "Vidéo 1min · 4K UHD · MP4 · 60fps", format: "MP4", duration: "1:00", price: "10 000 FCFA", img: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4", vcat: "paysages", vdur: "60" },
+  { title: "Culture gabonaise — village drone", details: "Vidéo 30s · 4K UHD · MP4 · 30fps", format: "MP4", duration: "0:30", price: "5 000 FCFA", img: "https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4", vcat: "culture", vdur: "30" },
+  { title: "Parc national Lopé — faune & forêt", details: "Vidéo 1min · 4K UHD · MP4 · 60fps", format: "MP4", duration: "1:00", price: "10 000 FCFA", img: "https://images.unsplash.com/photo-1511497584788-876760111969?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4", vcat: "nature", vdur: "60" },
+  { title: "Baie de Corisco — eaux turquoise", details: "Vidéo 30s · 4K UHD · MP4 · 30fps", format: "MP4", duration: "0:30", price: "5 000 FCFA", img: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=1200&h=680&fit=crop", videoUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", vcat: "paysages", vdur: "30" }
+];
+
+let currentItem = null;
+let currentVideoIndex = null;
+let isPaid = false;
+let activePCat = 'all';
+let activePRes = 'all';
+let activeVCat = 'all';
+let activeVDur = 'all';
+let activeSearch = '';
+
+// ─── MOBILE MENU ───
+function toggleMobileMenu() {
+  document.getElementById('mobileMenu').classList.toggle('open');
+}
+
+// ─── TABS ───
+function switchTab(tab) {
+  ['photos','videos','tarifs'].forEach(t => {
+    const panel = document.getElementById('panel-' + t);
+    const stab = document.getElementById('stab-' + t);
+    const ntab = document.getElementById('ntab-' + t);
+    if (panel) panel.classList.toggle('active', t === tab);
+    if (stab) stab.classList.toggle('active', t === tab);
+    if (ntab) ntab.classList.toggle('active', t === tab);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── PHOTO FILTERS ───
+function filterPhotos(el, type) {
+  if (type === 'cat') {
+    document.querySelectorAll('[data-pcat]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activePCat = el.dataset.pcat;
+  } else {
+    document.querySelectorAll('[data-pres]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activePRes = el.dataset.pres;
+  }
+  applyPhotoFilter();
+}
+
+function applyPhotoFilter() {
+  const items = document.querySelectorAll('#photo-grid .photo-item');
+  let visible = 0;
+  items.forEach(item => {
+    const catOk = activePCat === 'all' || item.dataset.pcat === activePCat;
+    const resOk = activePRes === 'all' || item.dataset.pres === activePRes;
+    const show = catOk && resOk;
+    item.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('no-photos').style.display = visible === 0 ? 'block' : 'none';
+  document.getElementById('photo-count').textContent = '(' + visible + ' résultats)';
+  document.getElementById('badge-photos').textContent = visible;
+  document.getElementById('stat-photos').textContent = visible;
+}
+
+// ─── VIDEO FILTERS ───
+function filterVideos(el, type) {
+  if (type === 'cat') {
+    document.querySelectorAll('[data-vcat]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activeVCat = el.dataset.vcat;
+  } else {
+    document.querySelectorAll('[data-vdur]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activeVDur = el.dataset.vdur;
+  }
+  applyVideoFilter();
+}
+
+function applyVideoFilter() {
+  const items = document.querySelectorAll('#video-grid .video-card');
+  let visible = 0;
+  items.forEach(item => {
+    const catOk = activeVCat === 'all' || item.dataset.vcat === activeVCat;
+    const durOk = activeVDur === 'all' || item.dataset.vdur === activeVDur;
+    const show = catOk && durOk;
+    item.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('no-videos').style.display = visible === 0 ? 'block' : 'none';
+  document.getElementById('video-count').textContent = '(' + visible + ' résultats)';
+  document.getElementById('badge-videos').textContent = visible;
+  document.getElementById('stat-videos').textContent = visible;
+}
+
+// ─── SEARCH ───
+function liveSearch(q) {
+  activeSearch = q.trim().toLowerCase();
+  document.getElementById('nav-search-input').value = q;
+  document.getElementById('hero-search-input').value = q;
+
+  const photos = document.querySelectorAll('#photo-grid .photo-item');
+  const videos = document.querySelectorAll('#video-grid .video-card');
+  let pv = 0, vv = 0;
+
+  if (!activeSearch) {
+    applyPhotoFilter();
+    applyVideoFilter();
+    return;
+  }
+
+  photos.forEach(item => {
+    const title = (item.dataset.ptitle || '').toLowerCase();
+    const cat = (item.dataset.pcat || '').toLowerCase();
+    const res = (item.dataset.pres || '').toLowerCase();
+    const show = title.includes(activeSearch) || cat.includes(activeSearch) || res.includes(activeSearch);
+    item.style.display = show ? '' : 'none';
+    if (show) pv++;
+  });
+  videos.forEach(item => {
+    const title = (item.dataset.vtitle || '').toLowerCase();
+    const cat = (item.dataset.vcat || '').toLowerCase();
+    const dur = (item.dataset.vdur || '').toLowerCase();
+    const show = title.includes(activeSearch) || cat.includes(activeSearch) || dur.includes(activeSearch) || (activeSearch === '4k');
+    item.style.display = show ? '' : 'none';
+    if (show) vv++;
+  });
+
+  document.getElementById('no-photos').style.display = pv === 0 ? 'block' : 'none';
+  document.getElementById('no-videos').style.display = vv === 0 ? 'block' : 'none';
+  document.getElementById('photo-count').textContent = '(' + pv + ' résultats)';
+  document.getElementById('video-count').textContent = '(' + vv + ' résultats)';
+  document.getElementById('badge-photos').textContent = pv;
+  document.getElementById('badge-videos').textContent = vv;
+  document.getElementById('stat-photos').textContent = pv;
+  document.getElementById('stat-videos').textContent = vv;
+}
+
+function quickFilter(kw) {
+  document.getElementById('hero-search-input').value = kw;
+  liveSearch(kw);
+  switchTab('photos');
+  const tabs = document.querySelector('.section-tabs');
+  if (tabs) window.scrollTo({ top: tabs.offsetTop - 70, behavior: 'smooth' });
+}
+
+// ─── SORT ───
+function sortPhotos(criteria) {
+  const grid = document.getElementById('photo-grid');
+  const items = Array.from(grid.children);
+  items.sort((a, b) => {
+    const ai = parseInt(a.dataset.photoIndex || 0);
+    const bi = parseInt(b.dataset.photoIndex || 0);
+    const da = photosData[ai] || {};
+    const db = photosData[bi] || {};
+    const pa = parseInt((da.price || '0').replace(/\D/g,''));
+    const pb = parseInt((db.price || '0').replace(/\D/g,''));
+    if (criteria === 'price-asc') return pa - pb;
+    if (criteria === 'price-desc') return pb - pa;
+    if (criteria === 'popular') return (bi % 3) - (ai % 3);
+    return ai - bi;
+  });
+  items.forEach(item => grid.appendChild(item));
+}
+
+function sortVideos(criteria) {
+  const grid = document.getElementById('video-grid');
+  const items = Array.from(grid.children);
+  items.sort((a, b) => {
+    const ai = parseInt(a.dataset.videoIndex || 0);
+    const bi = parseInt(b.dataset.videoIndex || 0);
+    const da = videosData[ai] || {};
+    const db = videosData[bi] || {};
+    const pa = parseInt((da.price || '0').replace(/\D/g,''));
+    const pb = parseInt((db.price || '0').replace(/\D/g,''));
+    if (criteria === 'price-asc') return pa - pb;
+    if (criteria === 'price-desc') return pb - pa;
+    if (criteria === 'popular') return (bi % 3) - (ai % 3);
+    return ai - bi;
+  });
+  items.forEach(item => grid.appendChild(item));
+}
+
+// ─── LIGHTBOX ───
+function openLightboxFromCard(card) {
+  const idx = parseInt(card.dataset.photoIndex || 0);
+  openLightbox(idx);
+}
+
+function openLightbox(index) {
+  const data = photosData[index];
+  if (!data) return;
+  currentItem = data;
+  document.getElementById('lbImage').src = data.img;
+  document.getElementById('lbTitle').textContent = data.title;
+  document.getElementById('lbDetails').textContent = data.details;
+  document.getElementById('lbPrice').textContent = data.price;
+  document.getElementById('lightboxModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lightboxModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function openPaymentFromLightbox() {
+  if (!currentItem) return;
+  closeLightbox();
+  setTimeout(() => openBuy(currentItem.title, currentItem.price.replace(' FCFA',''), currentItem.format, currentItem.img), 300);
+}
+
+// ─── VIDEO PREVIEW ───
+function openVideoPreview(index) {
+  const data = videosData[index];
+  if (!data) return;
+  currentItem = data;
+  currentVideoIndex = index;
+
+  document.getElementById('vidModalTitle').textContent = data.title;
+  document.getElementById('vidModalDetails').textContent = data.details;
+  document.getElementById('vidModalFormat').textContent = data.format;
+  document.getElementById('vidModalDuration').textContent = data.duration;
+  document.getElementById('vidModalPrice').textContent = data.price;
+
+  const video = document.getElementById('previewVideo');
+  video.src = data.videoUrl;
+  video.load();
+
+  const lockOverlay = document.getElementById('vidDownloadLock');
+  lockOverlay.style.display = isPaid ? 'none' : 'flex';
+
+  document.getElementById('videoPreviewModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  setTimeout(() => { video.play().catch(() => {}); }, 300);
+}
+
+function closeVideoPreview() {
+  const video = document.getElementById('previewVideo');
+  video.pause();
+  video.src = '';
+  document.getElementById('videoPreviewModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function openVideoPaymentFromPreview() {
+  if (!currentItem) return;
+  closeVideoPreview();
+  setTimeout(() => openBuy(currentItem.title, currentItem.price.replace(' FCFA',''), currentItem.format, currentItem.img), 300);
+}
+
+// ─── BUY MODAL ───
+function openBuy(name, price, format, imgSrc) {
+  currentItem = { title: name, price: price + ' FCFA', format: format, img: imgSrc };
+  document.getElementById('modal-media-name').textContent = name;
+  document.getElementById('modal-price').textContent = price + ' FCFA';
+  document.getElementById('modal-format').textContent = format;
+  document.getElementById('modal-sub-text').textContent = name;
+  document.getElementById('modal-preview-img').src = imgSrc || '';
+  document.getElementById('client-phone').value = '';
+  document.getElementById('phone-field').style.display = 'block';
+  document.getElementById('modal-buy').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBuy() {
+  document.getElementById('modal-buy').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function selectPay(el) {
+  document.querySelectorAll('.pay-method').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const method = el.dataset.method;
+  document.querySelector('.btn-pay').innerHTML = '<i class="ti ti-lock"></i> Payer via ' + method;
+  const isMobile = method === 'Airtel Money' || method === 'Moov Money';
+  document.getElementById('phone-field').style.display = isMobile ? 'block' : 'none';
+}
+
+function confirmPay() {
+  const method = document.querySelector('.pay-method.active')?.dataset?.method || '';
+  const isMobile = method === 'Airtel Money' || method === 'Moov Money';
+  if (isMobile) {
+    const phone = document.getElementById('client-phone').value.trim();
+    if (!phone) { showToast('Veuillez entrer votre numéro de téléphone.'); return; }
+  }
+  closeBuy();
+  showToast('Paiement initié. Vérifiez votre téléphone.');
+  isPaid = true;
+}
+
+// ─── PLAN SELECTION ───
+function selectPlan(plan) {
+  let itemName = '', price = '', format = '';
+  if (plan === 'unit') {
+    itemName = 'Achat à l\'unité';
+    price = '1 500';
+    format = 'À partir de 1 500 FCFA';
+  } else if (plan === 'monthly') {
+    itemName = 'Abonnement Mensuel';
+    price = '15 000';
+    format = '15 000 FCFA/mois';
+  } else if (plan === 'pro') {
+    itemName = 'Abonnement Pro';
+    price = '50 000';
+    format = '50 000 FCFA/mois';
+  }
+  openBuy(itemName, price, format, 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80&fit=crop');
+}
+
+// ─── AUTH MODAL ───
+function openAuthModal(type) {
+  document.getElementById('modal-auth').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  switchAuthTab(type);
+}
+
+function closeAuthModal() {
+  document.getElementById('modal-auth').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function switchAuthTab(type) {
+  const loginTab = document.getElementById('authTabLogin');
+  const registerTab = document.getElementById('authTabRegister');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  if (type === 'login') {
+    loginTab.classList.add('active'); registerTab.classList.remove('active');
+    loginForm.style.display = 'block'; registerForm.style.display = 'none';
+  } else {
+    registerTab.classList.add('active'); loginTab.classList.remove('active');
+    registerForm.style.display = 'block'; loginForm.style.display = 'none';
+  }
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ─── EVENTS ───
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeLightbox(); closeVideoPreview(); closeBuy(); closeAuthModal();
+  }
+});
+
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', function(e) {
+    if (e.target === this) {
+      this.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  });
+});
+
+window.addEventListener('resize', function() {
+  if (window.innerWidth >= 900) {
+    document.getElementById('mobileMenu').classList.remove('open');
+  }
+});
+
+// ─── INIT ───
+document.addEventListener('DOMContentLoaded', function() {
+  const pCount = document.querySelectorAll('#photo-grid .photo-item').length;
+  const vCount = document.querySelectorAll('#video-grid .video-card').length;
+  document.getElementById('photo-count').textContent = '(' + pCount + ' résultats)';
+  document.getElementById('video-count').textContent = '(' + vCount + ' résultats)';
+  document.getElementById('badge-photos').textContent = pCount;
+  document.getElementById('badge-videos').textContent = vCount;
+  document.getElementById('stat-photos').textContent = pCount;
+  document.getElementById('stat-videos').textContent = vCount;
+
+  document.querySelectorAll('#photo-grid .photo-item').forEach((el, i) => {
+    el.style.animationDelay = (i * 0.06) + 's';
+  });
+  document.querySelectorAll('#video-grid .video-card').forEach((el, i) => {
+    el.style.animationDelay = (i * 0.08) + 's';
+  });
+});
+</script>
+
+</body>
+</html>

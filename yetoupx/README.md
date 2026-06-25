@@ -1,117 +1,123 @@
 # yétou — Médias aériens HD & 4K · Gabon
 
-Plateforme de vente de photos et vidéos aériennes capturées par drone professionnel au Gabon. Développée par **Best Aero Drone · Libreville**.
+Plateforme de vente de photos et vidéos aériennes capturées par drone professionnel.
+Développée par **Best Aero Drone · Libreville, Gabon**.
 
-## Stack technique
+## Architecture
 
-- **Framework** : [Next.js 16](https://nextjs.org) (App Router)
-- **Langage** : TypeScript
-- **UI** : React 19 + Tailwind CSS v4
-- **Icônes** : Tabler Icons, Font Awesome
-- **Polices** : Inter, Sora (Google Fonts)
-- **Paiement** : SingPay (Airtel Money, Moov Money)
+```
+yetou/
+├── yetoupx/         → Frontend Next.js 16 + React 19
+└── yetoupxback/     → Backend Django 6 + DRF + PostgreSQL
+```
+
+## Stack
+
+| Frontend | Backend |
+|---|---|
+| Next.js 16 (App Router) | Django 6 + Django REST Framework |
+| React 19 + TypeScript | SimpleJWT (auth) |
+| Tailwind CSS v4 | django-allauth (Google OAuth) |
+| Tabler Icons | Cloudflare R2 (stockage S3) |
+| SingPay (paiement) | SingPay (paiement) |
 
 ## Démarrage
 
+### Backend (Django)
+
 ```bash
-npm install
-npm run dev
+cd yetoupxback
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+# → http://localhost:8000
 ```
 
-Ouvrir [http://localhost:3000](http://localhost:3000).
+### Frontend (Next.js)
+
+```bash
+cd yetoupx
+npm install
+npm run dev
+# → http://localhost:3000
+```
 
 ## Variables d'environnement
 
-Copier `.env.example` vers `.env.local` et remplir :
+### Backend (`yetoupxback/.env`)
 
 ```env
-SINGPAY_BASE_URL=https://gateway.singpay.ga
-SINGPAY_CLIENT_ID=votre_client_id
-SINGPAY_CLIENT_SECRET=votre_client_secret
-SINGPAY_WALLET_ID=votre_wallet_id
+DJANGO_SECRET_KEY=...
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+DB_NAME=yetou
+DB_USER=postgres
+DB_PASSWORD=...
+DB_HOST=localhost
+DB_PORT=5432
+
+R2_ACCESS_KEY_ID=...
+R2_SECRET_ACCESS_KEY=...
+R2_BUCKET_NAME=monprojet-media-yetou
+CF_ACCOUNT_ID=...
+R2_PUBLIC_DOMAIN=pub-xxx.r2.dev
+
+GOOGLE_ID_CLIENT=...
+GOOGLE_SECRET_CLIENT=...
 ```
 
-Si les variables sont absentes, l'API tourne en **mode simulation** (pas d'appel réel à SingPay).
+### Frontend (`yetoupx/.env.local`)
 
-## Intégration SingPay
-
-### Endpoints
-
-| Méthode | Endpoint |
-|---------|----------|
-| Airtel Money | `POST /v1/74/paiement` |
-| Moov Money | `POST /v1/62/paiement` |
-| Transfert (retrait) | `POST /v1/transfer` |
-| Statut transaction | `GET /v1/transaction/api/status/{id}` |
-
-### Flux de paiement
-
-```
-1. Client choisit un média → Acheter
-2. Sélectionne Airtel Money ou Moov Money
-3. Entre son numéro de téléphone
-4. POST /api/paiement → SingPay (USSD Push)
-5. Client valide sur son mobile
-6. Fonds transférés vers le wallet SingPay
+```env
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+SINGPAY_BASE_URL=...
+SINGPAY_CLIENT_ID=...
+SINGPAY_CLIENT_SECRET=...
+SINGPAY_WALLET_ID=...
 ```
 
-### Prérequis SingPay
+## API
 
-- Portefeuille SingPay **validé** (statut `active`, pas `pending`)
-- Numéro marchand Airtel Money et/ou Moov Money configuré
-- Support : [support@singpay.ga](mailto:support@singpay.ga)
-
-## Structure du projet
-
-```
-yetoupx/
-├── .env.local              # Variables sensibles (ignoré par git)
-├── .env.example            # Template des variables d'env
-├── src/
-│   ├── app/
-│   │   ├── page.tsx        # Page principale (catalogue, tarifs, modales)
-│   │   ├── layout.tsx      # Layout racine + métadonnées
-│   │   ├── globals.css     # Styles globaux
-│   │   ├── data.ts         # Données mock (photos, vidéos)
-│   │   └── api/
-│   │       └── paiement/
-│   │           └── route.ts # Endpoint API SingPay
-│   └── logo/               # Logos partenaires
-│       ├── airtel.png
-│       ├── moov.png
-│       └── google.jpg
-├── public/
-│   ├── visa.svg            # Logo Visa
-│   └── mastercard.svg      # Logo Mastercard
-└── package.json
-```
-
-## Fonctionnalités
-
-- Catalogue photos (grille masonry) et vidéos (grille responsive)
-- Filtres par catégorie, résolution, durée
-- Recherche instantanée
-- Lightbox photo avec watermark
-- Prévisualisation vidéo avec verrouillage téléchargement
-- Modale d'achat avec choix du moyen de paiement
-- Section tarifs (unité, mensuel, professionnel)
-- Authentification (email + Google)
-- Animations d'entrée (stagger fadeUp)
-- Design responsive (mobile, tablette, desktop)
+| Méthode | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/login/` | Connexion email/mdp |
+| `POST` | `/api/auth/register/` | Inscription |
+| `POST` | `/api/auth/token/refresh/` | Rafraîchir JWT |
+| `GET/PATCH` | `/api/users/profile/` | Profil |
+| `GET` | `/api/media/` | Liste médias |
+| `GET` | `/api/media/{id}/` | Détail média |
+| `GET/POST` | `/api/purchases/` | Achats |
+| `POST` | `/api/purchases/{id}/download/` | Télécharger |
 
 ## Scripts
 
 ```bash
-npm run dev      # Serveur de développement
+# Frontend
+npm run dev      # Serveur dev
 npm run build    # Build production
-npm run start    # Démarrage production
-npm run lint     # Linter
+npm run test     # Tests Jest
+
+# Backend
+python manage.py runserver     # Serveur dev
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
 ```
 
-## Déploiement
+## Cloudflare R2
 
-Déployable sur [Vercel](https://vercel.com), [Netlify](https://netlify.com) ou tout hébergeur Node.js. Ne pas oublier de configurer les variables d'environnement sur la plateforme de déploiement.
+Les fichiers sont stockés sur Cloudflare R2 dans le bucket `monprojet-media-yetou` :
+- `photo/` pour les images
+- `video/` pour les vidéos
 
----
+Configuration CORS requise sur le bucket pour autoriser le frontend.
+
+## Licence
 
 © 2026 Best Aero Drone · Tous droits réservés · Gabon

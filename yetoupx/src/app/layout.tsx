@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "yétou — Médias aériens HD & 4K · Gabon",
-  description: "Plateforme de vente de médias aériens HD & 4K — paysages, culture, nature et événements gabonais capturés par drone professionnel. Développée par Best Aero Drone · Libreville, Gabon.",
-  keywords: "drone, Gabon, photos aériennes, vidéos 4K, Libreville, paysages, médias professionnels",
+  description:
+    "Plateforme de vente de médias aériens HD & 4K — paysages, culture, nature et événements gabonais capturés par drone professionnel. Développée par Best Aero Drone · Libreville, Gabon.",
+  keywords:
+    "drone, Gabon, photos aériennes, vidéos 4K, Libreville, paysages, médias professionnels",
 };
 
 export default function RootLayout({
@@ -30,7 +33,9 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

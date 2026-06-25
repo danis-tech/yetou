@@ -1,0 +1,270 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}Yétou – Administration{% endblock %}
+{% block branding %}
+<h1 id="site-name">yé<em>tou</em> <span>administration</span></h1>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('#result_list');
+    if (table) {
+      table.classList.add('display');
+      new DataTable(table, {
+        paging: true,
+        searching: true,
+        ordering: true,
+        info: true,
+        lengthMenu: [10, 25, 50, 100],
+        language: {
+          url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/fr-FR.json'
+        },
+        initComplete: function() {
+          // Move search bar up
+          const filter = document.querySelector('.dtrg-search');
+          if (filter) {
+            const toolbar = document.querySelector('#changelist-search');
+            if (toolbar) toolbar.appendChild(filter.parentElement);
+          }
+        }
+      });
+    }
+  });
+</script>
+<style>
+  :root {
+    --primary: #C8371A;
+    --primary-dark: #A52D16;
+    --body-bg: #0A0A0F;
+    --body-fg: #F0EFEA;
+    --body-quiet-color: #8A8A95;
+    --darkened-bg: #14141A;
+    --selected-bg: rgba(200,55,26,0.15);
+    --selected-row: rgba(200,55,26,0.08);
+    --link-fg: #C8371A;
+    --link-hover-color: #e04528;
+    --link-selected-fg: #e04528;
+    --breadcrumbs-bg: #14141A;
+    --breadcrumbs-fg: #C8371A;
+    --header-bg: #050508;
+    --header-color: #F0EFEA;
+    --button-bg: #C8371A;
+    --button-hover-bg: #A52D16;
+    --button-fg: #fff;
+    --default-button-bg: #C8371A;
+    --default-button-hover-bg: #A52D16;
+    --close-button-bg: #2A2A35;
+    --close-button-hover-bg: #3A3A45;
+    --delete-button-bg: #C8371A;
+    --delete-button-hover-bg: #A52D16;
+    --object-tools-bg: #14141A;
+    --object-tools-hover-bg: #1A1A25;
+    --border-color: #2A2A35;
+    --hairline-color: #2A2A35;
+    --input-bg: #0A0A0F;
+    --input-fg: #F0EFEA;
+    --input-border: #2A2A35;
+    --message-success-bg: rgba(34,197,94,0.1);
+    --message-warning-bg: rgba(255,179,0,0.1);
+    --message-error-bg: rgba(200,55,26,0.1);
+    --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family-monospace: 'Fira Code', 'Consolas', monospace;
+    --header-height: 50px;
+    --header-logo-color: #F0EFEA;
+  }
+
+  body { font-family: var(--font-family-primary); font-size: 13px; }
+  body.login { background: #0A0A0F !important; }
+
+  #header {
+    height: var(--header-height); background: var(--header-bg);
+    border-bottom: 1px solid var(--border-color); color: var(--header-color);
+  }
+  #header h1 { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; padding: 0 16px; }
+  #header h1 em { color: var(--primary); font-style: normal; }
+  #header h1 span { font-size: 10px; font-weight: 400; color: var(--body-quiet-color); margin-left: 6px; }
+
+  #branding { float: left; }
+  #user-tools { font-size: 11px; }
+  #user-tools a { border-bottom: none; }
+  #user-tools a:focus, #user-tools a:hover { color: var(--primary); }
+
+  #header a:link, #header a:visited { color: var(--body-quiet-color); }
+  #header a:hover { color: var(--primary); }
+
+  .module h2, .module caption {
+    background: var(--darkened-bg); color: var(--body-fg);
+    font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .module { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: var(--darkened-bg); }
+
+  .breadcrumbs {
+    background: var(--breadcrumbs-bg) !important; color: var(--breadcrumbs-fg) !important;
+    font-size: 11px; padding: 8px 16px; border-bottom: 1px solid var(--border-color);
+  }
+  .breadcrumbs a { color: var(--body-quiet-color); }
+  .breadcrumbs a:hover { color: var(--primary); }
+
+  #content { padding: 20px; }
+  #content h1 { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: var(--body-fg); }
+
+  a:link, a:visited { color: var(--link-fg); }
+  a:focus, a:hover { color: var(--link-hover-color); }
+
+  input[type="text"], input[type="password"], input[type="email"], input[type="url"],
+  input[type="number"], input[type="tel"], textarea, select {
+    background: var(--input-bg); color: var(--input-fg); border: 1px solid var(--input-border);
+    border-radius: 6px; padding: 8px 12px; font-size: 13px; font-family: inherit;
+  }
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(200,55,26,0.12); outline: none;
+  }
+  select { background: var(--input-bg); }
+  select option { background: var(--darkened-bg); color: var(--body-fg); }
+
+  .form-row { border-bottom: 1px solid var(--border-color); padding: 12px 0; }
+  label { color: var(--body-fg); font-weight: 500; }
+
+  input[type="submit"], button, .button {
+    background: var(--button-bg); border: none; color: var(--button-fg);
+    padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  input[type="submit"]:hover, button:hover, .button:hover,
+  input[type="submit"]:focus, button:focus, .button:focus {
+    background: var(--button-hover-bg);
+  }
+  .button.default { background: var(--default-button-bg); }
+  .button.default:hover { background: var(--default-button-hover-bg); }
+
+  .deletelink, .deletelink:link, .deletelink:visited {
+    background: var(--delete-button-bg) !important; color: #fff !important;
+    border-radius: 6px; padding: 6px 12px; font-size: 11px;
+  }
+  .deletelink:hover { background: var(--delete-button-hover-bg) !important; }
+
+  .object-tools a.addlink { background: var(--primary); border-radius: 6px; padding: 6px 14px; }
+
+  table { border-collapse: separate; border-spacing: 0; }
+  thead th {
+    background: var(--darkened-bg); color: var(--body-quiet-color);
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 10px 12px; border-bottom: 1px solid var(--border-color);
+  }
+  tbody td, tbody th {
+    padding: 10px 12px; border-bottom: 1px solid var(--hairline-color);
+    color: var(--body-fg); font-size: 12px;
+  }
+  tbody tr:hover { background: var(--selected-row); }
+  #result_list tbody tr:last-child td { border-bottom: none; }
+
+  .paginator {
+    background: var(--darkened-bg); border-top: 1px solid var(--border-color);
+    padding: 10px 12px; font-size: 11px;
+  }
+  .paginator a { border-radius: 6px; padding: 4px 10px; }
+  .paginator a:hover { background: var(--primary); color: #fff; }
+
+  .messagelist { padding: 0 20px; }
+  .success { background: var(--message-success-bg); border: 1px solid rgba(34,197,94,0.2); border-radius: 8px; color: var(--body-fg); }
+  .warning { background: var(--message-warning-bg); border: 1px solid rgba(255,179,0,0.2); border-radius: 8px; }
+  .errornote { background: var(--message-error-bg); border: 1px solid rgba(200,55,26,0.2); border-radius: 8px; }
+
+  /* Login page */
+  .login #header { display: none; }
+  .login #container {
+    background: var(--darkened-bg); border: 1px solid var(--border-color);
+    border-radius: 16px; padding: 40px; max-width: 400px; margin: 100px auto;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  }
+  .login .form-row { margin-bottom: 14px; }
+  .login .form-row label { font-size: 12px; font-weight: 500; }
+  .login #content { padding: 0; }
+  .login #content h1 { text-align: center; margin-bottom: 24px; }
+  .login .submit-row { display: flex; justify-content: center; }
+  .login .submit-row input { width: 100%; padding: 10px; font-size: 13px; }
+
+  /* Sidebar */
+  #content-related {
+    background: var(--darkened-bg); border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 16px; margin-right: 0;
+  }
+  #content-related h2 { font-family: 'Sora', sans-serif; font-size: 12px; }
+  #content-related h3 { color: var(--body-fg); font-size: 12px; }
+
+  /* Hide sidebar on main index */
+  .dashboard #content-related { display: none; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--body-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+  /* Remove unnecessary elements */
+  .object-tools { margin-top: -30px; }
+  #footer { display: none; }
+  div.help, p.help, span.help { font-size: 11px; color: var(--body-quiet-color); }
+
+  /* DataTables dark theme */
+  .dt-container { font-family: var(--font-family-primary); }
+  .dt-search input, .dt-length select {
+    background: var(--input-bg) !important; color: var(--input-fg) !important;
+    border: 1px solid var(--input-border) !important; border-radius: 6px !important;
+    padding: 6px 10px !important; font-size: 12px !important;
+  }
+  .dt-search label, .dt-length label, .dt-info { color: var(--body-quiet-color) !important; font-size: 12px; }
+  .dt-paging button {
+    background: var(--darkened-bg) !important; color: var(--body-quiet-color) !important;
+    border: 1px solid var(--border-color) !important; border-radius: 6px !important;
+    font-size: 12px !important; padding: 4px 10px !important;
+  }
+  .dt-paging button:hover { background: var(--primary) !important; color: #fff !important; border-color: var(--primary) !important; }
+  .dt-paging button.current { background: var(--primary) !important; color: #fff !important; border-color: var(--primary) !important; }
+  .dt-paging button.disabled { opacity: 0.4; }
+
+  /* Info tooltip */
+  .field-info-tip {
+    color: #8A8A95; font-size: 13px; cursor: help; margin-left: 4px;
+    position: relative; display: inline-block; transition: color .15s;
+  }
+  .field-info-tip:hover { color: #C8371A; }
+  .field-info-tip:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    background: #14141A; color: #F0EFEA; border: 1px solid #2A2A35;
+    padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 400;
+    white-space: normal; max-width: 360px; width: max-content;
+    z-index: 9999; line-height: 1.5;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5); text-align: left;
+    pointer-events: none;
+  }
+
+  /* Collapse - preserve Django native behavior */
+  fieldset.module.collapse h2 { cursor: pointer; }
+  fieldset.module.collapse.hidden-section { opacity: 0.25; pointer-events: none; }
+  fieldset.module.collapse.hidden-section h2 { pointer-events: auto; }
+  table.display thead th { cursor: pointer; }
+  table.display thead th.dt-ordering-asc, table.display thead th.dt-ordering-desc {
+    background: var(--primary) !important; color: #fff !important;
+  }
+  table.display thead th:hover { background: var(--selected-bg) !important; }
+
+  /* Hide admin filter sidebar */
+  #changelist-filter, .module.filtered { display: none !important; }
+  .change-list .filtered { background: none !important; }
+  .change-list .filtered .results, .change-list .filtered .paginator, .change-list .filtered #toolbar { margin-right: 0 !important; }
+  .change-list .filtered table { border-right: none !important; }
+</style>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+{% block footer %}{% endblock %}

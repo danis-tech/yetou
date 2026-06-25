@@ -1,132 +1,95 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { validatePayment } from "@/lib/validators";
+import { processPayment, isSimulated } from "@/services/payment";
+import { ok, badRequest, tooManyRequests, badGateway, serverError } from "@/lib/response";
 
-const SINGPAY_BASE_URL = process.env.SINGPAY_BASE_URL || "";
-const SINGPAY_CLIENT_ID = process.env.SINGPAY_CLIENT_ID || "";
-const SINGPAY_CLIENT_SECRET = process.env.SINGPAY_CLIENT_SECRET || "";
-const SINGPAY_WALLET_ID = process.env.SINGPAY_WALLET_ID || "";
+const DJANGO_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "yetou-internal-secret-change-me";
 
-const ENDPOINTS: Record<string, string> = {
-  "Airtel Money": "/v1/74/paiement",
-  "Moov Money": "/v1/62/paiement",
-};
-
-export async function POST(request: NextRequest) {
+async function logToDjango(data: {
+  amount: number;
+  method: string;
+  reference: string;
+  phone: string;
+  status: string;
+  message: string;
+  transaction_id: string;
+}) {
   try {
-    const body = await request.json();
-    const { amount, reference, client_msisdn, portefeuille, method } = body;
-
-    if (!amount) {
-      return NextResponse.json(
-        { success: false, message: "Le montant est requis." },
-        { status: 400 }
-      );
-    }
-
-    const isMobile = method === "Airtel Money" || method === "Moov Money";
-    const isCard = method === "Visa" || method === "Mastercard";
-
-    if (isMobile && !client_msisdn) {
-      return NextResponse.json(
-        { success: false, message: "Le numéro de téléphone est requis pour le paiement mobile." },
-        { status: 400 }
-      );
-    }
-
-    if (isCard) {
-      return NextResponse.json(
-        { success: false, message: "Paiement par carte bancaire pas encore disponible. Utilisez Airtel Money ou Moov Money." },
-        { status: 400 }
-      );
-    }
-
-    if (!SINGPAY_BASE_URL || !SINGPAY_CLIENT_ID || !SINGPAY_CLIENT_SECRET || !SINGPAY_WALLET_ID) {
-      console.warn("SingPay: variables d'environnement manquantes. Mode simulation activé.");
-      return NextResponse.json({
-        success: true,
-        message: "Paiement simulé (mode développement). Configurez SINGPAY_BASE_URL, SINGPAY_CLIENT_ID, SINGPAY_CLIENT_SECRET et SINGPAY_WALLET_ID dans .env.local pour activer SingPay.",
-        transaction: {
-          status: "SIMULATED",
-          amount: amount.toString(),
-          reference: reference || `YETOU-${Date.now()}`,
-          client_msisdn: client_msisdn || "000000000",
-          portefeuille: portefeuille || SINGPAY_WALLET_ID,
-        },
-      });
-    }
-
-    const endpoint = ENDPOINTS[method] || ENDPOINTS["Airtel Money"];
-
-    const singpayBody: Record<string, unknown> = {
-      amount: Number(amount),
-      reference: reference || `YETOU-${Date.now()}`,
-      client_msisdn,
-      portefeuille: portefeuille || SINGPAY_WALLET_ID,
-      disbursement: "",
-      isTransfer: true,
-    };
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const url = `${SINGPAY_BASE_URL}${endpoint}`;
-    console.log(`SingPay → ${url} (${method})`);
-
-    const response = await fetch(url, {
+    await fetch(`${DJANGO_URL}/payments/log/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-client-id": SINGPAY_CLIENT_ID,
-        "x-client-secret": SINGPAY_CLIENT_SECRET,
-        "x-wallet": SINGPAY_WALLET_ID,
+        "X-Internal-Secret": INTERNAL_SECRET,
       },
-      body: JSON.stringify(singpayBody),
-      signal: controller.signal,
+      body: JSON.stringify(data),
     });
+  } catch {
+    console.warn("Impossible d'enregistrer le paiement dans Django.");
+  }
+}
 
-    clearTimeout(timeout);
+export async function POST(request: NextRequest) {
+  try {
+    const ip = getClientIp(request);
+    const { allowed, remaining } = rateLimit(`paiement:${ip}`, 10, 60000);
 
-    const contentType = response.headers.get("content-type") || "";
-    const rawText = await response.text();
-    let data: any;
-    if (contentType.includes("application/json")) {
-      try { data = JSON.parse(rawText); } catch { data = rawText; }
-    } else {
-      console.error(`SingPay réponse inattendue (status ${response.status}, non-JSON):`, rawText.slice(0, 500));
-      return NextResponse.json({
-        success: false,
-        message: `L'API SingPay a répondu de manière inattendue (status ${response.status}). Vérifie l'URL (${url}) et les credentials.`,
-        debug: rawText.slice(0, 300),
-      }, { status: 502 });
+    if (!allowed) {
+      return tooManyRequests("Trop de requêtes. Veuillez réessayer dans une minute.");
     }
 
-    if (!response.ok) {
-      console.error("SingPay error:", data);
-      return NextResponse.json(
-        { success: false, message: data?.status?.message || "Erreur lors du paiement SingPay." },
-        { status: response.status }
-      );
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return badRequest("Corps de requête invalide.");
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `Paiement ${method} initié. Veuillez confirmer sur votre téléphone.`,
-      transaction: data.transaction,
-      status: data.status,
-    });
-  } catch (error: any) {
+    const validation = validatePayment(body);
+    if (!validation.valid) {
+      return badRequest(validation.errors.join(" "));
+    }
+
+    const { amount, reference, client_msisdn, portefeuille, method } = body as {
+      amount: number; reference: string; client_msisdn: string; portefeuille?: string; method: string;
+    };
+
+    const isCard = method === "Visa" || method === "Mastercard";
+    if (isCard) {
+      return badRequest("Paiement par carte bancaire pas encore disponible. Utilisez Airtel Money ou Moov Money.");
+    }
+
+    const result = await processPayment({ amount, reference, client_msisdn, portefeuille, method });
+
+    // Log payment to Django admin
+    const txId = result.transaction && typeof result.transaction === "object"
+      ? String((result.transaction as Record<string, unknown>).reference || reference)
+      : reference;
+    logToDjango({
+      amount,
+      method,
+      reference: reference || "",
+      phone: client_msisdn || "",
+      status: isSimulated() ? "simulated" : (result.success ? "success" : "failed"),
+      message: result.message,
+      transaction_id: txId,
+    }).catch(() => {});
+
+    if (!result.success) {
+      return badGateway(result.message);
+    }
+
+    return ok(result);
+  } catch (error: unknown) {
     console.error("Erreur API paiement:", error);
-    const isDnsError = error?.cause?.code === "ENOTFOUND";
-    const isTimeout = error?.name === "AbortError";
-    return NextResponse.json(
-      {
-        success: false,
-        message: isDnsError
-          ? `L'API SingPay est inaccessible (${SINGPAY_BASE_URL}). Vérifie SINGPAY_BASE_URL dans .env.local.`
-          : isTimeout
-            ? "L'API SingPay ne répond pas (timeout 15s)."
-            : "Erreur serveur lors du traitement du paiement.",
-      },
-      { status: 502 }
-    );
+    const err = error as Error & { cause?: { code?: string } };
+    if (err?.cause?.code === "ENOTFOUND") {
+      return badGateway("L'API SingPay est inaccessible. Vérifiez SINGPAY_BASE_URL.");
+    }
+    if (err?.name === "AbortError") {
+      return badGateway("L'API SingPay ne répond pas (timeout 15s).");
+    }
+    return serverError("Erreur lors du traitement du paiement.");
   }
 }

@@ -1,102 +1,148 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { createPurchase, confirmFedapayPayment } from "@/services/api";
+import { getApiUrl } from "@/lib/api-url";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-
-export default function PaiementRetourPage() {
+function PaiementRetourContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { addPurchase, setPlan } = useAuth();
+  const { setPlan } = useAuth();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("Vérification de votre paiement...");
 
   useEffect(() => {
-    const paymentStatus = searchParams.get("status");
-    const reference = searchParams.get("ref");
+    const ref = searchParams.get("ref");
+    const fedapayStatus = searchParams.get("status");
+    const transactionId = searchParams.get("id");
+    const singpayStatus = searchParams.get("status");
 
-    if (paymentStatus === "success" && reference) {
-      handleSuccess(reference);
-    } else if (paymentStatus === "error") {
+    // Retour FedaPay (carte) : ?ref=...&id=...&status=approved
+    if (ref && transactionId && fedapayStatus === "approved") {
+      handleFedapaySuccess(ref, transactionId);
+      return;
+    }
+    if (fedapayStatus === "canceled") {
+      setStatus("error");
+      setMessage("Paiement annulé. Vous pouvez réessayer.");
+      return;
+    }
+
+    // Retour SingPay (mobile)
+    if (singpayStatus === "success" && ref) {
+      handleSingpaySuccess(ref);
+      return;
+    }
+    if (singpayStatus === "error") {
       setStatus("error");
       setMessage("Le paiement a échoué ou a été annulé. Vous pouvez réessayer.");
-    } else {
-      setStatus("error");
-      setMessage("Paramètres de retour invalides.");
+      return;
     }
-  }, []);
 
-  async function handleSuccess(reference: string) {
+    setStatus("error");
+    setMessage("Paramètres de retour invalides.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  async function handleFedapaySuccess(reference: string, transactionId: string) {
     try {
-      // Récupérer l'info de l'achat stockée pendant l'initiation du paiement
-      const pendingRaw = localStorage.getItem("yetou_pending_purchase");
-      const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
-
-      // Valider la référence
-      if (!pending || pending.reference !== reference) {
-        // Si pas de correspondance locale, on marque quand même succès
-        // car le callback SingPay fait foi
-        setStatus("success");
-        setMessage("Paiement confirmé !");
-        setTimeout(() => router.push("/"), 2000);
+      const token = localStorage.getItem("yetou_token");
+      if (!token) {
+        setStatus("error");
+        setMessage("Connectez-vous avec le même compte pour finaliser votre achat.");
         return;
       }
 
-      // Créer l'achat dans Django
+      const confirmed = await confirmFedapayPayment({ reference, transaction_id: transactionId });
+      if (!confirmed.ok) {
+        setStatus("error");
+        setMessage(confirmed.error);
+        return;
+      }
+
+      const pendingRaw = localStorage.getItem("yetou_pending_purchase");
+      const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
+      if (pending?.plan) {
+        try {
+          const res = await fetch(`${getApiUrl()}/users/profile/`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ plan: pending.plan }),
+          });
+          if (res.ok) setPlan(pending.plan);
+        } catch {
+          console.warn("callback: impossible de sync le plan Django.");
+        }
+      }
+
+      localStorage.removeItem("yetou_pending_purchase");
+      setStatus("success");
+      setMessage("Paiement confirmé ! Votre achat est disponible dans le dashboard.");
+      setTimeout(() => router.push("/dashboard?tab=downloads"), 2000);
+    } catch {
+      setStatus("error");
+      setMessage("Erreur lors de la validation du paiement.");
+    }
+  }
+
+  async function handleSingpaySuccess(reference: string) {
+    try {
+      const pendingRaw = localStorage.getItem("yetou_pending_purchase");
+      const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
+
+      if (!pending || pending.reference !== reference) {
+        setStatus("success");
+        setMessage("Paiement confirmé par SingPay. Si l'achat n'apparaît pas, contactez le support avec la référence : " + reference);
+        setTimeout(() => router.push("/dashboard?tab=downloads"), 3000);
+        return;
+      }
+
+      const token = localStorage.getItem("yetou_token");
+      if (!token) {
+        setStatus("error");
+        setMessage("Connectez-vous avec le même compte pour récupérer votre achat.");
+        return;
+      }
+
       if (pending.mediaId) {
-        const token = localStorage.getItem("yetou_token");
-        if (token) {
-          try {
-            await fetch(`${API_URL}/purchases/`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                media_id: pending.mediaId,
-                payment_method: pending.paymentMethod || "",
-                payment_reference: reference,
-                payment_status: "success",
-              }),
-            });
-          } catch {
-            console.warn("callback: impossible de créer l'achat Django.");
-          }
+        const purchase = await createPurchase(pending.mediaId, {
+          payment_method: pending.paymentMethod || "",
+          payment_reference: reference,
+          payment_status: "success",
+        });
+        if (!purchase) {
+          setStatus("error");
+          setMessage(`Paiement reçu mais l'achat n'a pas pu être enregistré. Référence : ${reference}`);
+          return;
         }
       }
 
-      // Sync plan si abonnement
       if (pending.plan) {
-        const token = localStorage.getItem("yetou_token");
-        if (token) {
-          try {
-            await fetch(`${API_URL}/users/profile/`, {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ plan: pending.plan }),
-            });
-          } catch {
-            console.warn("callback: impossible de sync le plan Django.");
-          }
+        try {
+          const res = await fetch(`${getApiUrl()}/users/profile/`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ plan: pending.plan }),
+          });
+          if (res.ok) setPlan(pending.plan);
+        } catch {
+          console.warn("callback: impossible de sync le plan Django.");
         }
-        setPlan(pending.plan);
       }
 
-      // Ajouter au contexte local
-      addPurchase(pending.buyItem);
-
-      // Nettoyer
       localStorage.removeItem("yetou_pending_purchase");
 
       setStatus("success");
-      setMessage("Paiement confirmé ! Redirection...");
-      setTimeout(() => router.push("/"), 2000);
+      setMessage("Paiement confirmé ! Votre achat est disponible dans le dashboard.");
+      setTimeout(() => router.push("/dashboard?tab=downloads"), 2000);
     } catch {
       setStatus("error");
       setMessage("Erreur lors de la validation du paiement.");
@@ -132,7 +178,7 @@ export default function PaiementRetourPage() {
           <h2 style={{ fontFamily: "Sora, sans-serif", fontSize: "22px", fontWeight: 700, color: "#F0EFEA" }}>
             Paiement réussi !
           </h2>
-          <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center" }}>{message}</p>
+          <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center", maxWidth: 420 }}>{message}</p>
         </>
       )}
 
@@ -146,18 +192,26 @@ export default function PaiementRetourPage() {
             <i className="ti ti-x" style={{ fontSize: "36px", color: "#C8371A" }}></i>
           </div>
           <h2 style={{ fontFamily: "Sora, sans-serif", fontSize: "22px", fontWeight: 700, color: "#F0EFEA" }}>
-            Paiement annulé
+            Paiement non finalisé
           </h2>
-          <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center" }}>{message}</p>
+          <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center", maxWidth: 420 }}>{message}</p>
           <button
             className="btn-primary"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/dashboard?tab=downloads")}
             style={{ marginTop: "8px", padding: "10px 24px" }}
           >
-            Retour à l&apos;accueil
+            Aller au dashboard
           </button>
         </>
       )}
     </div>
+  );
+}
+
+export default function PaiementRetourPage() {
+  return (
+    <Suspense fallback={null}>
+      <PaiementRetourContent />
+    </Suspense>
   );
 }

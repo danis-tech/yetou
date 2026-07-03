@@ -1,13 +1,7 @@
 "use client";
 
 import type { BuyItem } from "@/types";
-
-const PAY_METHODS = [
-  { name: "Airtel Money", logo: "", available: true },
-  { name: "Moov Money", logo: "", available: true },
-  { name: "Visa", logo: "/visa.svg", available: false },
-  { name: "Mastercard", logo: "/mastercard.svg", available: false },
-];
+import { PAY_METHODS, isCardMethod, isMobileMethod, logoForPayMethod } from "@/lib/payment-methods";
 
 interface BuyModalProps {
   item: BuyItem | null;
@@ -36,13 +30,6 @@ export default function BuyModal({
 }: BuyModalProps) {
   if (!item) return null;
 
-  const logoForMethod = (method: string) => {
-    if (method === "Airtel Money") return airtelLogoSrc;
-    if (method === "Moov Money") return moovLogoSrc;
-    if (method === "Visa") return "/visa.svg";
-    return "/mastercard.svg";
-  };
-
   return (
     <div className={`modal-bg ${item ? "open" : ""}`} id="modal-buy">
       <div className="modal">
@@ -70,7 +57,7 @@ export default function BuyModal({
           <span className="modal-row-label">Total</span>
           <span className="modal-total">{item.price} FCFA</span>
         </div>
-        {(activePayMethod === "Airtel Money" || activePayMethod === "Moov Money") && (
+        {isMobileMethod(activePayMethod) && (
           <div className="form-group" style={{ marginTop: "14px" }}>
             <label>Numéro de téléphone</label>
             <input
@@ -89,12 +76,23 @@ export default function BuyModal({
               onClick={() => method.available && onSelectMethod(method.name)}
               style={!method.available ? { opacity: 0.4, cursor: "not-allowed" } : {}}
             >
-              <img src={logoForMethod(method.name)} alt={method.name} className="pay-logo" />
+              <img
+                src={logoForPayMethod(method.name, airtelLogoSrc, moovLogoSrc)}
+                alt={method.name}
+                className="pay-logo"
+              />
               {method.name}
-              {!method.available && <span style={{ display: "block", fontSize: "9px", color: "#8A8A95", marginTop: "2px" }}>Bientôt</span>}
+              {!method.available && (
+                <span style={{ display: "block", fontSize: "9px", color: "#8A8A95", marginTop: "2px" }}>Bientôt</span>
+              )}
             </div>
           ))}
         </div>
+        {isCardMethod(activePayMethod) && (
+          <p style={{ fontSize: "11px", color: "#8A8A95", margin: "0 0 12px", lineHeight: 1.4 }}>
+            Formulaire carte sécurisé — saisissez votre numéro Visa ou Mastercard (sans compte crypto).
+          </p>
+        )}
         <button className="btn-pay" onClick={onConfirm} disabled={payLoading}>
           {payLoading ? (
             <>Traitement en cours...</>

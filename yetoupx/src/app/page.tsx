@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { fetchMedia } from "@/services/api";
+import { fetchMedia, getCachedMedia } from "@/services/api";
 import type { Tab, AuthTab, BuyItem } from "@/types";
 import type { Photo, Video } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import { usePayment } from "@/hooks/usePayment";
+import { usePurchases } from "@/hooks/usePurchases";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { useLongPressGuard } from "@/hooks/useLongPressGuard";
 import { usePhotoFilter, useVideoFilter } from "@/hooks/useMediaFilter";
+import { buildSearchIndex, useMediaSearch } from "@/hooks/useMediaSearch";
 
 import Navbar from "@/components/layout/Navbar";
 import MobileMenu from "@/components/layout/MobileMenu";
@@ -24,6 +26,7 @@ import BuyModal from "@/components/modals/BuyModal";
 import AuthModal from "@/components/modals/AuthModal";
 import DownloadsModal from "@/components/modals/DownloadsModal";
 import Toast from "@/components/ui/Toast";
+import MediaGridSkeleton from "@/components/ui/MediaGridSkeleton";
 import PayFooter from "@/components/payment/PayFooter";
 
 import airtelLogo from "../logo/airtel.png";
@@ -33,11 +36,14 @@ import googleLogo from "../logo/google.jpg";
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<Tab>("photos");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const { toast, toastVisible, toastError, showToast } = useToast();
-  const { isLoggedIn, purchasedItems, downloadMedia, remainingDownloads } = useAuth();
-  const { externalize, loading: payLoading } = usePayment();
+  const { isLoggedIn } = useAuth();
+  const [purchasesRefresh, setPurchasesRefresh] = useState(0);
+  const { paidPurchases, downloadPurchase, remainingDownloads } = usePurchases(isLoggedIn, purchasesRefresh);
+  const { checkout, loading: payLoading } = usePayment();
 
   const longPressCaptureToast = useCallback(() => {
     showToast("Capture interdite. Ce média est protégé par yétou.", true);
@@ -49,56 +55,50 @@ export default function HomePage() {
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const mapPhotos = useCallback((p: Awaited<ReturnType<typeof fetchMedia>>) => p.map((m) => ({
+    id: m.id, title: m.title,
+    details: `${m.quality_display} · ${m.resolution || m.file_size_display || ""} · ${m.category_display || m.category}`,
+    format: m.license_type || "Commerciale", price: `${m.price} FCFA`,
+    img: m.preview_url || m.thumbnail_url || m.stream_url || m.file_url,
+    pcat: m.category, pres: m.quality.toLowerCase(), downloads: m.downloads,
+    searchIndex: buildSearchIndex(
+      m.title, m.category_display, m.category, m.quality, m.quality_display,
+      m.resolution, m.province, m.city, m.tags, m.license_type,
+    ),
+  })), []);
+
+  const mapVideos = useCallback((v: Awaited<ReturnType<typeof fetchMedia>>) => v.map((m) => ({
+    id: m.id, title: m.title, details: `Vidéo ${m.duration || "0:30"} · ${m.quality_display}`,
+    format: "MP4", duration: m.duration || "0:30", price: `${m.price} FCFA`,
+    img: m.preview_url || m.thumbnail_url || "",
+    videoUrl: m.stream_url || m.file_url,
+    vcat: m.category, vdur: m.duration?.includes("1:") ? "60" : "30", downloads: m.downloads,
+    searchIndex: buildSearchIndex(
+      m.title, m.category_display, m.category, m.quality, m.quality_display,
+      m.duration, m.province, m.city, m.tags,
+    ),
+  })), []);
+
   useEffect(() => {
+    const cachedP = getCachedMedia("photo");
+    const cachedV = getCachedMedia("video");
+    if (cachedP?.length) setAllPhotos(mapPhotos(cachedP));
+    if (cachedV?.length) setAllVideos(mapVideos(cachedV));
+    if (cachedP?.length && cachedV?.length) setLoading(false);
+
     Promise.all([fetchMedia("photo"), fetchMedia("video")]).then(([p, v]) => {
-      setAllPhotos(p.map((m) => ({
-        id: m.id, title: m.title, details: `${m.quality_display} · ${m.resolution || m.file_size_display} · ${m.category_display}`,
-        format: m.license_type, price: `${m.price} FCFA`, img: m.file_url,
-        pcat: m.category, pres: m.quality.toLowerCase(), downloads: m.downloads,
-      })));
-      setAllVideos(v.map((m) => ({
-        id: m.id, title: m.title, details: `Vidéo ${m.duration || "0:30"} · ${m.quality_display}`,
-        format: "MP4", duration: m.duration || "0:30", price: `${m.price} FCFA`,
-        img: m.file_url, videoUrl: m.file_url,
-        vcat: m.category, vdur: m.duration?.includes("1:") ? "60" : "30", downloads: m.downloads,
-      })));
+      setAllPhotos(mapPhotos(p));
+      setAllVideos(mapVideos(v));
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [mapPhotos, mapVideos]);
 
   const photos = usePhotoFilter(allPhotos);
   const videos = useVideoFilter(allVideos);
 
-  const searchPhoto = useCallback(
-    (q: string) => {
-      if (!q) return photos.filtered;
-      const ql = q.toLowerCase();
-      return photos.filtered.filter(
-        (p) =>
-          p.title.toLowerCase().includes(ql) ||
-          p.pcat.toLowerCase().includes(ql) ||
-          p.pres.toLowerCase().includes(ql)
-      );
-    },
-    [photos.filtered]
-  );
-
-  const searchVideo = useCallback(
-    (q: string) => {
-      if (!q) return videos.filtered;
-      const ql = q.toLowerCase();
-      return videos.filtered.filter(
-        (v) =>
-          v.title.toLowerCase().includes(ql) ||
-          v.vcat.toLowerCase().includes(ql) ||
-          v.vdur.toLowerCase().includes(ql) ||
-          ql === "4k"
-      );
-    },
-    [videos.filtered]
-  );
-
-  const filteredPhotos = searchQuery ? searchPhoto(searchQuery) : photos.filtered;
-  const filteredVideos = searchQuery ? searchVideo(searchQuery) : videos.filtered;
+  const searchedPhotos = useMediaSearch(photos.filtered, searchQuery);
+  const searchedVideos = useMediaSearch(videos.filtered, searchQuery);
+  const filteredPhotos = searchedPhotos;
+  const filteredVideos = searchedVideos;
 
   const [buyItem, setBuyItem] = useState<BuyItem | null>(null);
   const [activePayMethod, setActivePayMethod] = useState("Airtel Money");
@@ -116,6 +116,7 @@ export default function HomePage() {
         setBuyItem(null);
         setAuthOpen(false);
         setShowDownloads(false);
+        setMobileSearchOpen(false);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -134,8 +135,8 @@ export default function HomePage() {
     switchTab("photos");
   };
 
-  const openBuy = (name: string, price: string, format: string, img: string, type: "photo" | "video" = "photo") => {
-    setBuyItem({ name, price, format, img, _type: type });
+  const openBuy = (name: string, price: string, format: string, img: string, type: "photo" | "video" = "photo", mediaId?: number) => {
+    setBuyItem({ name, price, format, img, _type: type, mediaId });
     setActivePayMethod("Airtel Money");
     setClientPhone("");
   };
@@ -147,17 +148,19 @@ export default function HomePage() {
       setAuthTab("login");
       return;
     }
-    const isMobileMoney = activePayMethod === "Airtel Money" || activePayMethod === "Moov Money";
-    if (isMobileMoney && !clientPhone) {
-      showToast("Veuillez entrer votre numéro de téléphone.", true);
-      return;
-    }
-    await externalize({
+    const ok = await checkout({
       buyItem,
+      mediaId: buyItem.mediaId,
       method: activePayMethod,
+      onLinkOpened: () => showToast(
+        activePayMethod === "Visa" || activePayMethod === "Mastercard"
+          ? "Redirection vers le paiement sécurisé par carte…"
+          : "Finalisez le paiement dans l'onglet SingPay.",
+      ),
       onError: (msg) => showToast(msg, true),
     });
-    setBuyItem(null);
+
+    if (ok) setBuyItem(null);
   };
 
   const selectPlan = (plan: string) => {
@@ -173,17 +176,38 @@ export default function HomePage() {
     setAuthOpen(true);
   };
 
+  const handleSearchChange = useCallback((q: string) => {
+    setSearchQuery(q);
+    if (q.trim() && activeTab === "tarifs") {
+      setActiveTab("photos");
+    }
+  }, [activeTab]);
+
+  const handleHeroSearch = useCallback(() => {
+    if (searchQuery.trim()) {
+      switchTab("photos");
+    }
+  }, [searchQuery]);
+
   return (
     <>
       <Navbar
         activeTab={activeTab}
         onSwitchTab={switchTab}
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={handleSearchChange}
+        searchOpen={mobileSearchOpen}
+        onSearchOpenChange={(open) => {
+          setMobileSearchOpen(open);
+          if (open) setMobileMenuOpen(false);
+        }}
         onShowDownloads={() => setShowDownloads(true)}
         onOpenAuth={openAuth}
         mobileMenuOpen={mobileMenuOpen}
-        onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+        onToggleMobileMenu={() => {
+          setMobileMenuOpen((o) => !o);
+          setMobileSearchOpen(false);
+        }}
       />
 
       <MobileMenu
@@ -194,9 +218,9 @@ export default function HomePage() {
 
       <Hero
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={handleSearchChange}
         onQuickFilter={quickFilter}
-        onSearch={() => switchTab("photos")}
+        onSearch={handleHeroSearch}
       />
 
       <StatsBar photoCount={filteredPhotos.length} videoCount={filteredVideos.length} />
@@ -210,35 +234,43 @@ export default function HomePage() {
 
       <div className={`panel ${activeTab === "photos" ? "active" : ""}`}>
         <div className="content">
-          <PhotoGrid
-            photos={filteredPhotos}
-            activePCat={photos.activePCat}
-            activePRes={photos.activePRes}
-            pSort={photos.pSort}
-            onSetPCat={(cat) => { photos.setActivePCat(cat); setSearchQuery(""); }}
-            onSetPRes={(res) => { photos.setActivePRes(res); setSearchQuery(""); }}
-            onSetPSort={photos.setPSort}
-            onBuy={(name, price, format, img) => openBuy(name, price, format, img, "photo")}
-            onContextCapture={longPressCaptureToast}
-            onGoTarifs={() => switchTab("tarifs")}
-          />
+          {loading ? (
+            <MediaGridSkeleton type="photo" count={8} />
+          ) : (
+            <PhotoGrid
+              photos={filteredPhotos}
+              activePCat={photos.activePCat}
+              activePRes={photos.activePRes}
+              pSort={photos.pSort}
+              onSetPCat={(cat) => { photos.setActivePCat(cat); setSearchQuery(""); }}
+              onSetPRes={(res) => { photos.setActivePRes(res); setSearchQuery(""); }}
+              onSetPSort={photos.setPSort}
+              onBuy={(name, price, format, img, id) => openBuy(name, price, format, img, "photo", id)}
+              onContextCapture={longPressCaptureToast}
+              onGoTarifs={() => switchTab("tarifs")}
+            />
+          )}
         </div>
       </div>
 
       <div className={`panel ${activeTab === "videos" ? "active" : ""}`}>
         <div className="content">
-          <VideoGrid
-            videos={filteredVideos}
-            activeVCat={videos.activeVCat}
-            activeVDur={videos.activeVDur}
-            vSort={videos.vSort}
-            onSetVCat={(cat) => { videos.setActiveVCat(cat); setSearchQuery(""); }}
-            onSetVDur={(dur) => { videos.setActiveVDur(dur); setSearchQuery(""); }}
-            onSetVSort={videos.setVSort}
-            onBuy={(name, price, format, img) => openBuy(name, price, format, img, "video")}
-            onContextCapture={longPressCaptureToast}
-            onGoTarifs={() => switchTab("tarifs")}
-          />
+          {loading ? (
+            <MediaGridSkeleton type="video" count={6} />
+          ) : (
+            <VideoGrid
+              videos={filteredVideos}
+              activeVCat={videos.activeVCat}
+              activeVDur={videos.activeVDur}
+              vSort={videos.vSort}
+              onSetVCat={(cat) => { videos.setActiveVCat(cat); setSearchQuery(""); }}
+              onSetVDur={(dur) => { videos.setActiveVDur(dur); setSearchQuery(""); }}
+              onSetVSort={videos.setVSort}
+              onBuy={(name, price, format, img, id) => openBuy(name, price, format, img, "video", id)}
+              onContextCapture={longPressCaptureToast}
+              onGoTarifs={() => switchTab("tarifs")}
+            />
+          )}
         </div>
       </div>
 
@@ -281,10 +313,11 @@ export default function HomePage() {
 
       <DownloadsModal
         open={showDownloads}
-        items={purchasedItems}
+        items={paidPurchases}
         onClose={() => setShowDownloads(false)}
-        downloadMedia={downloadMedia}
+        onDownload={downloadPurchase}
         remainingDownloads={remainingDownloads}
+        onError={(msg) => showToast(msg, true)}
       />
 
       <Toast message={toast} visible={toastVisible} isError={toastError} />

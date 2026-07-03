@@ -185,6 +185,7 @@ class Purchase(models.Model):
 
 class PaymentLog(models.Model):
     STATUS_CHOICES = [
+        ("pending", "En attente"),
         ("success", "Réussi"),
         ("simulated", "Simulé"),
         ("failed", "Échoué"),
@@ -212,6 +213,51 @@ class PaymentLog(models.Model):
 
     def __str__(self):
         return f"{self.get_method_display()} · {self.amount:,} FCFA · {self.get_status_display()}".replace(",", " ")
+
+
+class PaygateSession(models.Model):
+    """Session de paiement carte (FedaPay / Visa / Mastercard)."""
+
+    STATUS_CHOICES = [
+        ("pending", "En attente"),
+        ("success", "Réussi"),
+        ("failed", "Échoué"),
+    ]
+
+    reference = models.CharField("Référence commande", max_length=255, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="paygate_sessions",
+    )
+    media = models.ForeignKey(
+        Media,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="paygate_sessions",
+    )
+    amount_fcfa = models.PositiveIntegerField("Montant (FCFA)")
+    amount_usd = models.DecimalField("Montant (USD)", max_digits=10, decimal_places=2)
+    method = models.CharField("Méthode", max_length=20, choices=PaymentLog.METHOD_CHOICES)
+    plan = models.CharField("Plan abonnement", max_length=20, blank=True, default="")
+    status = models.CharField("Statut", max_length=15, choices=STATUS_CHOICES, default="pending")
+    purchase = models.ForeignKey(
+        Purchase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="paygate_sessions",
+    )
+    created_at = models.DateTimeField("Créé le", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Session PayGate"
+        verbose_name_plural = "Sessions PayGate"
+
+    def __str__(self):
+        return f"{self.reference} · {self.get_status_display()}"
 
 
 class PricingConfig(models.Model):

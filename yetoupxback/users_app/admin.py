@@ -6,7 +6,7 @@ from rest_framework.authtoken.models import TokenProxy
 from django.db.models import Sum, Q
 from django.utils import timezone
 from datetime import timedelta
-from .models import User
+from .models import User, Notification
 
 # Unregister unused models
 for model in (Group, Site, TokenProxy):
@@ -77,3 +77,11 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (None, {"fields": ("email", "name", "password1", "password2")}),
     )
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("title", "user", "notification_type", "read", "created_at")
+    list_filter = ("notification_type", "read")
+    search_fields = ("title", "user__email")
+    readonly_fields = ("created_at",)

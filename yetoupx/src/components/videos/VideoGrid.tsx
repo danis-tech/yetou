@@ -12,7 +12,7 @@ interface VideoGridProps {
   onSetVCat: (cat: string) => void;
   onSetVDur: (dur: string) => void;
   onSetVSort: (sort: string) => void;
-  onBuy: (name: string, price: string, format: string, img: string) => void;
+  onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
   onContextCapture: () => void;
   onGoTarifs: () => void;
 }

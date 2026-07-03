@@ -1,17 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Photo } from "@/types";
 
 interface PhotoCardProps {
   photo: Photo;
   idx: number;
-  onBuy: (name: string, price: string, format: string, img: string) => void;
+  onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
   onContextCapture: () => void;
 }
 
 export default function PhotoCard({ photo, idx, onBuy, onContextCapture }: PhotoCardProps) {
   const router = useRouter();
+  const imgSrc = photo.img?.trim() || "";
+  const [imgLoaded, setImgLoaded] = useState(!imgSrc);
 
   return (
     <div
@@ -21,11 +24,24 @@ export default function PhotoCard({ photo, idx, onBuy, onContextCapture }: Photo
       onContextMenu={(e) => { e.preventDefault(); onContextCapture(); }}
     >
       <div className="photo-inner">
-        <div
-          className="photo-img"
-          style={{ backgroundImage: `url(${photo.img.replace("1600", "700").replace("1200", "900")})` }}
-          onContextMenu={(e) => e.preventDefault()}
-        />
+        {!imgLoaded && imgSrc && (
+          <div className="media-skeleton media-skeleton-photo" style={{ position: "absolute", inset: 0, borderRadius: 0 }}>
+            <div className="media-skeleton-shimmer" />
+          </div>
+        )}
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt={photo.title}
+            loading="lazy"
+            decoding="async"
+            className={`photo-img ${imgLoaded ? "photo-img--loaded" : "photo-img--loading"}`}
+            onLoad={() => setImgLoaded(true)}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+        ) : (
+          <div className="photo-img photo-img--placeholder" aria-hidden="true" />
+        )}
       </div>
       <div className={`photo-tag ${photo.pres === "4k" ? "k4" : ""}`}>
         {photo.pres === "4k" ? "4K" : "HD"}
@@ -46,7 +62,7 @@ export default function PhotoCard({ photo, idx, onBuy, onContextCapture }: Photo
             className="btn-buy-sm"
             onClick={(e) => {
               e.stopPropagation();
-              onBuy(photo.title, photo.price.replace(" FCFA", ""), photo.format, photo.img);
+              onBuy(photo.title, photo.price.replace(" FCFA", ""), photo.format, photo.img, photo.id);
             }}
           >
             Acheter

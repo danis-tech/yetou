@@ -32,6 +32,6 @@ export function serverError(message = "Erreur serveur.") {
   return NextResponse.json({ error: "server_error", message }, { status: 500 });
 }
 
-export function badGateway(message = "Service externe indisponible.") {
-  return NextResponse.json({ error: "bad_gateway", message }, { status: 502 });
+export function badGateway(message = "Service externe indisponible.", details?: unknown) {
+  return NextResponse.json({ error: "bad_gateway", message, details }, { status: 502 });
 }

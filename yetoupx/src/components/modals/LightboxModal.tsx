@@ -6,7 +6,7 @@ import type { Photo } from "@/types";
 interface LightboxModalProps {
   photo: Photo | null;
   onClose: () => void;
-  onBuy: (name: string, price: string, format: string, img: string) => void;
+  onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
   onCaptureToast: () => void;
 }
 
@@ -138,7 +138,7 @@ export default function LightboxModal({ photo, onClose, onBuy, onCaptureToast }:
                 onClick={() => {
                   onClose();
                   setTimeout(
-                    () => onBuy(photo.title, photo.price.replace(" FCFA", ""), photo.format, photo.img),
+                    () => onBuy(photo.title, photo.price.replace(" FCFA", ""), photo.format, photo.img, photo.id),
                     300
                   );
                 }}

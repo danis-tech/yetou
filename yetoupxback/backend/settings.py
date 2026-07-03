@@ -28,11 +28,12 @@ AWS_SECRET_ACCESS_KEY = env("R2_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = env("R2_BUCKET_NAME")
 AWS_S3_ENDPOINT_URL = f"https://{env('CF_ACCOUNT_ID')}.r2.cloudflarestorage.com"
 AWS_S3_REGION_NAME = "auto"
-AWS_S3_CUSTOM_DOMAIN = env("R2_PUBLIC_DOMAIN", default=None)
 AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = True
 AWS_QUERYSTRING_AUTH = True
 AWS_QUERYSTRING_EXPIRE = 3600
+# Domaine public R2 pour les aperçus catalogue (URLs non signées)
+R2_PUBLIC_DOMAIN = env("R2_PUBLIC_DOMAIN", default="")
 
 # ─── Applications ───
 INSTALLED_APPS = [
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "storages",
     "allauth",
@@ -129,11 +131,20 @@ INTERNAL_API_SECRET = env("INTERNAL_API_SECRET", default="yetou-internal-secret-
 # À récupérer dans le dashboard SingPay et à définir dans .env
 SINGPAY_WEBHOOK_SECRET = env("SINGPAY_WEBHOOK_SECRET", default="")
 
+# FedaPay — carte Visa/Mastercard (optionnel, désactivé si clé vide)
+FEDAPAY_SECRET_KEY = env("FEDAPAY_SECRET_KEY", default="")
+FEDAPAY_ENVIRONMENT = env("FEDAPAY_ENVIRONMENT", default="sandbox")
+FEDAPAY_CURRENCY = env("FEDAPAY_CURRENCY", default="XOF")
+FEDAPAY_CHECKOUT_MODE = env("FEDAPAY_CHECKOUT_MODE", default="card")
+FCFA_PER_USD = env("FCFA_PER_USD", default=650, cast=float)
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ─── CORS ───
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS", default="http://localhost:3000").split(",")
 CORS_ALLOW_CREDENTIALS = True
+
+FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
 # ─── REST Framework ───
 REST_FRAMEWORK = {
@@ -144,7 +155,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
+    "PAGE_SIZE": 100,
 }
 
 # ─── Simple JWT ───
@@ -157,7 +168,16 @@ SIMPLE_JWT = {
 }
 
 # ─── Allauth / Google ───
-SOCIALACCOUNT_PROVIDERS = {}
+# Credentials Google : uniquement via l'admin Django (Social applications)
+# Ne pas définir "APP" ici — sinon conflit MultipleObjectsReturned avec la BDD
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "OAUTH_PKCE_ENABLED": True,
+        "FETCH_USERINFO": True,
+    }
+}
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
@@ -179,6 +199,7 @@ REST_AUTH = {
     "JWT_AUTH_REFRESH_COOKIE": "yetou-refresh",
     "JWT_AUTH_RETURN_EXPIRATION": True,
     "SESSION_LOGIN": False,
+    "LOGIN_SERIALIZER": "users_app.serializers.CustomLoginSerializer",
     "REGISTER_SERIALIZER": "users_app.serializers.CustomRegisterSerializer",
 }
 

@@ -5,7 +5,7 @@ import type { Video } from "@/types";
 interface VideoPreviewModalProps {
   video: Video | null;
   onClose: () => void;
-  onBuy: (name: string, price: string, format: string, img: string) => void;
+  onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
 }
 
 export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPreviewModalProps) {
@@ -159,7 +159,7 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
                   const v = video;
                   onClose();
                   setTimeout(
-                    () => onBuy(v.title, v.price.replace(" FCFA", ""), v.format, v.img),
+                    () => onBuy(v.title, v.price.replace(" FCFA", ""), v.format, v.img, v.id),
                     300
                   );
                 }}

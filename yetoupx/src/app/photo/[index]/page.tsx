@@ -8,15 +8,13 @@ import { useToast } from "@/hooks/useToast";
 import { usePayment } from "@/hooks/usePayment";
 import { useAuth } from "@/contexts/AuthContext";
 import Toast from "@/components/ui/Toast";
+import PageLoader from "@/components/ui/PageLoader";
+import AuthModal from "@/components/modals/AuthModal";
+import { PAY_METHODS, isCardMethod, logoForPayMethod } from "@/lib/payment-methods";
+import type { AuthTab } from "@/types";
+import googleLogo from "@/logo/google.jpg";
 import airtelLogo from "@/logo/airtel.png";
 import moovLogo from "@/logo/moov.png";
-
-const PAY_METHODS = [
-  { name: "Airtel Money", logo: "", available: true },
-  { name: "Moov Money", logo: "", available: true },
-  { name: "Visa", logo: "/visa.svg", available: false },
-  { name: "Mastercard", logo: "/mastercard.svg", available: false },
-];
 
 export default function PhotoDetailPage({ params }: { params: Promise<{ index: string }> }) {
   const router = useRouter();
@@ -38,34 +36,42 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
 
   const { toast, toastVisible, toastError, showToast } = useToast();
   const { isLoggedIn } = useAuth();
-  const { externalize, loading: payLoading } = usePayment();
+  const { checkout, loading: payLoading } = usePayment();
 
   const [activePayMethod, setActivePayMethod] = useState("Airtel Money");
   const [clientPhone, setClientPhone] = useState("");
   const [purchased, setPurchased] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<AuthTab>("login");
 
   const handleBuy = useCallback(async () => {
     if (!media) return;
     if (!isLoggedIn) {
-      showToast("Connectez-vous pour effectuer un achat.", true);
+      setAuthTab("login");
+      setAuthOpen(true);
       return;
     }
-    const isMobileMoney = activePayMethod === "Airtel Money" || activePayMethod === "Moov Money";
-    if (isMobileMoney && !clientPhone) {
-      showToast("Veuillez entrer votre numéro de téléphone.", true); return;
-    }
-    setPurchased(true);
-    await externalize({
+    const ok = await checkout({
       mediaId: media.id,
-      buyItem: { name: media.title, price: String(media.price), format: media.license_type, img: media.file_url, _type: "photo" },
+      buyItem: { name: media.title, price: String(media.price), format: media.license_type, img: media.file_url, _type: "photo", mediaId: media.id },
       method: activePayMethod,
+      onLinkOpened: () => showToast(
+        activePayMethod === "Visa" || activePayMethod === "Mastercard"
+          ? "Redirection vers le paiement sécurisé par carte…"
+          : "Finalisez le paiement dans l'onglet SingPay.",
+      ),
       onError: (msg) => showToast(msg, true),
     });
-  }, [media, activePayMethod, clientPhone, externalize, showToast]);
+    if (ok) setPurchased(true);
+  }, [media, activePayMethod, checkout, showToast, isLoggedIn]);
 
-  const logoSrc = (m: string) => m === "Airtel Money" ? airtelLogo.src : m === "Moov Money" ? moovLogo.src : m === "Visa" ? "/visa.svg" : "/mastercard.svg";
+  const logoSrc = (m: string) => logoForPayMethod(m, airtelLogo.src, moovLogo.src);
 
-  if (loading) return <Loader />;
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#0A0A0F" }}>
+      <PageLoader message="Chargement de la photo…" fullScreen />
+    </div>
+  );
   if (!media) return <NotFound router={router} />;
 
   const display = {
@@ -75,7 +81,7 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
     format: media.license_type,
     price: media.price,
     priceStr: `${media.price.toLocaleString("fr-FR")} FCFA`,
-    img: media.file_url,
+    img: media.preview_url || media.stream_url || media.file_url,
     province: media.province || "Gabon",
     city: media.city || "",
     camera: media.camera_model || "DJI Mavic 3 Pro",
@@ -160,7 +166,9 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
               <div style={{ fontFamily: "Sora, sans-serif", fontSize: "28px", fontWeight: 700, color: "#F0EFEA" }}>{display.priceStr}</div>
               <div style={{ fontSize: "12px", color: "#8A8A95", marginTop: "4px" }}>Paiement sécurisé</div>
             </div>
-            <div className="form-group"><label>Numéro de téléphone</label><input type="tel" placeholder="Ex: 077 00 00 00" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /></div>
+            {isCardMethod(activePayMethod) ? null : (
+              <div className="form-group"><label>Numéro de téléphone</label><input type="tel" placeholder="Ex: 077 00 00 00" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /></div>
+            )}
             <div style={{ margin: "16px 0" }}><div style={{ fontSize: "12px", color: "#F0EFEA", fontWeight: 500, marginBottom: "8px" }}>Méthode de paiement</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
                 {PAY_METHODS.map((m) => (
@@ -196,7 +204,7 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
               style={{ background: "#14141A", border: "1px solid #2A2A35", borderRadius: "10px", overflow: "hidden", cursor: "pointer", transition: "all .2s" }}
               onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "rgba(200,55,26,0.5)"; el.style.transform = "translateY(-2px)"; }}
               onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "#2A2A35"; el.style.transform = "translateY(0)"; }}>
-              <div style={{ width: "100%", aspectRatio: "4/3", backgroundImage: `url(${m.file_url})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+              <div style={{ width: "100%", aspectRatio: "4/3", backgroundImage: `url(${m.preview_url || m.stream_url || m.file_url})`, backgroundSize: "cover", backgroundPosition: "center" }} />
               <div style={{ padding: "10px 14px" }}>
                 <div style={{ fontFamily: "Sora, sans-serif", fontSize: "12px", fontWeight: 600, color: "#F0EFEA", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.title}</div>
                 <div style={{ fontSize: "11px", color: "#8A8A95", marginTop: "4px" }}>{m.quality_display} · {m.price.toLocaleString("fr-FR")} FCFA</div>
@@ -207,15 +215,16 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
       </div>}
 
       <Toast message={toast} visible={toastVisible} isError={toastError} />
+      <AuthModal
+        open={authOpen}
+        authTab={authTab}
+        onClose={() => setAuthOpen(false)}
+        onSwitchTab={setAuthTab}
+        googleLogoSrc={googleLogo.src}
+        showToast={showToast}
+      />
     </div>
   );
-}
-
-function Loader() {
-  return <div style={{ minHeight: "100vh", background: "#0A0A0F", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px" }}>
-    <div style={{ width: "48px", height: "48px", borderRadius: "50%", border: "3px solid #2A2A35", borderTopColor: "#C8371A", animation: "spin 0.8s linear infinite" }} />
-    <p style={{ color: "#8A8A95" }}>Chargement...</p>
-  </div>;
 }
 
 function NotFound({ router }: { router: ReturnType<typeof useRouter> }) {

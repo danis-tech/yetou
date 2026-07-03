@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { validateExternalPayment } from "@/lib/validators";
-import { externalizePayment, isSimulated } from "@/services/payment";
+import { externalizePayment, buildPaymentReference, sanitizeReference } from "@/services/payment";
 import { ok, badRequest, tooManyRequests, badGateway, serverError } from "@/lib/response";
 
-const DJANGO_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+import { getServerDjangoApiUrl } from "@/lib/api-url";
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || "yetou-internal-secret-change-me";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -18,7 +18,7 @@ async function logToDjango(data: {
   transaction_id: string;
 }) {
   try {
-    await fetch(`${DJANGO_URL}/payments/log/`, {
+    await fetch(`${getServerDjangoApiUrl()}/payments/log/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -53,36 +53,35 @@ export async function POST(request: NextRequest) {
     }
 
     const { amount, reference, method } = body as {
-      amount: number; reference: string; client_msisdn: string; method: string;
+      amount: number; reference: string; method: string;
     };
 
-    const encodedRef = encodeURIComponent(reference || `YETOU-${Date.now()}`);
-    const redirectSuccess = `${APP_URL}/paiement/retour?status=success&ref=${encodedRef}`;
-    const redirectError = `${APP_URL}/paiement/retour?status=error&ref=${encodedRef}`;
+    const cleanRef = sanitizeReference(reference || buildPaymentReference());
+    const redirectSuccess = `${APP_URL}/paiement/retour?status=success&ref=${encodeURIComponent(cleanRef)}`;
+    const redirectError = `${APP_URL}/paiement/retour?status=error&ref=${encodeURIComponent(cleanRef)}`;
 
     const result = await externalizePayment({
       amount: Number(amount),
-      reference: reference || `YETOU-${Date.now()}`,
+      reference: cleanRef,
       redirectSuccess,
       redirectError,
     });
 
-    // Log to Django
     logToDjango({
       amount: Number(amount),
       method,
-      reference: reference || "",
+      reference: cleanRef,
       phone: "",
-      status: isSimulated() ? "simulated" : (result.success ? "pending" : "failed"),
+      status: result.success ? "pending" : "failed",
       message: result.link || result.message || "",
-      transaction_id: reference || "",
+      transaction_id: cleanRef,
     }).catch(() => {});
 
     if (!result.success) {
-      return badGateway(result.message || "Erreur lors de la création du lien de paiement.");
+      return badGateway(result.message || "Erreur SingPay.", process.env.NODE_ENV === "development" ? result.debug : undefined);
     }
 
-    return ok({ success: true, link: result.link, exp: result.exp });
+    return ok({ success: true, link: result.link, exp: result.exp, reference: cleanRef });
   } catch (error: unknown) {
     console.error("Erreur API paiement externalisé:", error);
     return serverError("Erreur lors du traitement du paiement.");

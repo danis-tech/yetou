@@ -2,19 +2,37 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { completeSession } = useAuth();
   const [error, setError] = useState("");
 
   useEffect(() => {
     const access = searchParams.get("access");
     const refresh = searchParams.get("refresh");
+    const authError = searchParams.get("error");
 
-    if (access && refresh) {
-      localStorage.setItem("yetou_token", access);
-      localStorage.setItem("yetou_refresh", refresh);
+    if (authError) {
+      setError("Échec de l'authentification Google. Veuillez réessayer.");
+      setTimeout(() => router.replace("/"), 3000);
+      return;
+    }
+
+    if (!access || !refresh) {
+      setError("Échec de l'authentification Google. Veuillez réessayer.");
+      setTimeout(() => router.replace("/"), 3000);
+      return;
+    }
+
+    completeSession(access, refresh).then((ok) => {
+      if (!ok) {
+        setError("Connexion Google réussie mais impossible de charger votre profil.");
+        setTimeout(() => router.replace("/"), 3000);
+        return;
+      }
 
       const returnUrl = localStorage.getItem("yetou_return_url");
       localStorage.removeItem("yetou_return_url");
@@ -28,11 +46,8 @@ function CallbackHandler() {
         }
       } catch {}
       router.replace("/dashboard");
-    } else {
-      setError("Échec de l'authentification Google. Veuillez réessayer.");
-      setTimeout(() => router.replace("/"), 3000);
-    }
-  }, [searchParams, router]);
+    });
+  }, [searchParams, router, completeSession]);
 
   if (error) {
     return (

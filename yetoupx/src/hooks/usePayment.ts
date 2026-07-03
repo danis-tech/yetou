@@ -3,8 +3,13 @@
 import { useState, useCallback } from "react";
 import type { BuyItem, UserPlan } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { createPurchase, initiateFedapayPayment } from "@/services/api";
+import { getApiUrl } from "@/lib/api-url";
+import { CARD_METHODS, MOBILE_METHODS } from "@/lib/payment-methods";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+function buildPaymentReference(): string {
+  return `YETOU-${Date.now()}`;
+}
 
 export interface PaymentOptions {
   mediaId?: number | null;
@@ -22,63 +27,25 @@ export interface ExternalizeOptions {
   onError?: (msg: string) => void;
 }
 
+export interface CheckoutOptions {
+  mediaId?: number | null;
+  buyItem: BuyItem;
+  method: string;
+  phone?: string;
+  onLinkOpened?: () => void;
+  onError?: (msg: string) => void;
+}
+
 /**
- * Hook centralisé pour le flux de paiement :
- * - pay() : USSD push via /api/paiement (SingPay 74/62)
- * - externalize() : lien de paiement via /api/paiement/ext (SingPay /ext)
+ * Paiement mobile (SingPay) ou carte (FedaPay).
  */
 export function usePayment() {
-  const { addPurchase, setPlan } = useAuth();
+  const { setPlan } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // ── USSD Push ──────────────────────────────────────────────────────
-  const pay = useCallback(async (opts: PaymentOptions): Promise<boolean> => {
-    const { mediaId, buyItem, method, phone, onSuccess, onError } = opts;
-
-    const isMobile = method === "Airtel Money" || method === "Moov Money";
-    if (isMobile && !phone) {
-      onError?.("Veuillez entrer votre numéro de téléphone.");
-      return false;
-    }
-
-    setLoading(true);
-    try {
-      const reference = `YETOU-${buyItem.name.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 20)}-${Date.now()}`;
-      const singpayRes = await fetch("/api/paiement", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: parseInt(String(buyItem.price).replace(/\D/g, "")),
-          reference,
-          client_msisdn: phone || "000000000",
-          portefeuille: "",
-          method,
-        }),
-      });
-
-      const singpayData = await singpayRes.json();
-      if (!singpayData.success) {
-        onError?.(singpayData.message || "Erreur lors du paiement.");
-        return false;
-      }
-
-      await createPurchaseAndSyncPlan(mediaId, buyItem, method, reference);
-      addPurchase(buyItem);
-      onSuccess?.();
-      return true;
-    } catch {
-      onError?.("Erreur réseau. Veuillez réessayer.");
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [addPurchase, setPlan]);
-
-  // ── Lien de paiement externalisé (SingPay /ext) ────────────────────
   const externalize = useCallback(async (opts: ExternalizeOptions): Promise<boolean> => {
     const { mediaId, buyItem, method, onError } = opts;
-
-    const reference = `YETOU-${buyItem.name.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 20)}-${Date.now()}`;
+    const reference = buildPaymentReference();
 
     setLoading(true);
     try {
@@ -86,78 +53,218 @@ export function usePayment() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: parseInt(String(buyItem.price).replace(/\D/g, "")),
+          amount: parseAmount(buyItem.price),
           reference,
           method,
         }),
       });
 
-      const data = await res.json();
-      if (!data.success || !data.link) {
-        onError?.(data.message || "Erreur lors de la création du lien de paiement.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success || !data.link) {
+        onError?.(data.message || data.error || "Erreur lors de la création du lien de paiement.");
         return false;
       }
 
-      // Déterminer le plan si abonnement
+      const finalRef = data.reference || reference;
+
       let plan: UserPlan | null = null;
       if (buyItem.name.includes("Abonnement Mensuel")) plan = "monthly";
       if (buyItem.name.includes("Abonnement Pro")) plan = "pro";
 
-      // Stocker l'achat en attente pour le callback de retour
-      localStorage.setItem("yetou_pending_purchase", JSON.stringify({
-        reference,
-        buyItem,
-        mediaId: mediaId || null,
-        plan,
-        paymentMethod: method,
-        timestamp: Date.now(),
-      }));
+      localStorage.setItem(
+        "yetou_pending_purchase",
+        JSON.stringify({
+          reference: finalRef,
+          buyItem,
+          mediaId: mediaId ?? null,
+          plan,
+          paymentMethod: method,
+          timestamp: Date.now(),
+        }),
+      );
 
-      // Ouvrir le lien SingPay dans un nouvel onglet
       window.open(data.link, "_blank", "noopener,noreferrer");
       return true;
     } catch {
-      onError?.("Erreur réseau. Veuillez réessayer.");
+      onError?.("Erreur réseau. Vérifiez votre connexion et réessayez.");
       return false;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { pay, externalize, loading };
+  const payWithCard = useCallback(async (opts: CheckoutOptions): Promise<boolean> => {
+    const { mediaId, buyItem, method, onLinkOpened, onError } = opts;
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
+    if (!token) {
+      onError?.("Connectez-vous pour payer par carte.");
+      return false;
+    }
+
+    let plan: UserPlan | null = null;
+    if (buyItem.name.includes("Abonnement Mensuel")) plan = "monthly";
+    if (buyItem.name.includes("Abonnement Pro")) plan = "pro";
+
+    setLoading(true);
+    try {
+      const result = await initiateFedapayPayment({
+        media_id: mediaId ?? null,
+        amount_fcfa: parseAmount(buyItem.price),
+        method,
+        plan: plan || undefined,
+      });
+
+      if (!result.ok) {
+        onError?.(result.error);
+        return false;
+      }
+
+      localStorage.setItem(
+        "yetou_pending_purchase",
+        JSON.stringify({
+          reference: result.data.reference,
+          transactionId: result.data.transaction_id,
+          buyItem,
+          mediaId: mediaId ?? null,
+          plan,
+          paymentMethod: method,
+          provider: "fedapay",
+          timestamp: Date.now(),
+        }),
+      );
+
+      window.location.href = result.data.payment_url;
+      onLinkOpened?.();
+      return true;
+    } catch {
+      onError?.("Erreur réseau. Vérifiez votre connexion et réessayez.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /** Route vers FedaPay (carte) ou SingPay (mobile). */
+  const checkout = useCallback(
+    async (opts: CheckoutOptions): Promise<boolean> => {
+      const { method, onLinkOpened, onError } = opts;
+
+      if (CARD_METHODS.has(method)) {
+        return payWithCard(opts);
+      }
+
+      if (!MOBILE_METHODS.has(method)) {
+        onError?.("Méthode de paiement non supportée.");
+        return false;
+      }
+
+      const ok = await externalize(opts);
+      if (ok) onLinkOpened?.();
+      return ok;
+    },
+    [externalize, payWithCard],
+  );
+
+  /** USSD direct (secours) — non utilisé par défaut. */
+  const pay = useCallback(async (opts: PaymentOptions): Promise<boolean> => {
+    const { mediaId, buyItem, method, phone, onSuccess, onError } = opts;
+
+    const isMobile = method === "Airtel Money" || method === "Moov Money";
+    if (isMobile && !phone?.trim()) {
+      onError?.("Veuillez entrer votre numéro de téléphone.");
+      return false;
+    }
+
+    setLoading(true);
+    try {
+      const reference = buildPaymentReference();
+      const res = await fetch("/api/paiement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseAmount(buyItem.price),
+          reference,
+          client_msisdn: phone.trim(),
+          portefeuille: "",
+          method,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        onError?.(data.message || data.error || "Erreur lors du paiement SingPay.");
+        return false;
+      }
+
+      const paymentStatus = data.confirmed ? "success" : "pending";
+      const created = await createPurchaseAndSyncPlan(
+        mediaId,
+        buyItem,
+        method,
+        data.reference || reference,
+        paymentStatus,
+        setPlan,
+      );
+
+      if (!created.ok && mediaId) {
+        onError?.("Paiement initié mais l'achat n'a pas pu être enregistré. Contactez le support.");
+        return false;
+      }
+
+      onSuccess?.();
+      return true;
+    } catch {
+      onError?.("Erreur réseau. Vérifiez votre connexion et réessayez.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [setPlan]);
+
+  return { checkout, externalize, payWithCard, pay, loading };
 }
 
-/** Crée l'achat Django + sync le plan si abonnement, après un paiement réussi. */
+function parseAmount(price: string): number {
+  const n = parseInt(String(price).replace(/\D/g, ""), 10);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
 async function createPurchaseAndSyncPlan(
   mediaId: number | null | undefined,
   buyItem: BuyItem,
   paymentMethod?: string,
   paymentReference?: string,
   paymentStatus?: string,
-) {
+  setPlan?: (plan: UserPlan) => void,
+): Promise<{ ok: boolean }> {
   const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
+  let purchaseOk = true;
 
   if (mediaId && token) {
-    await fetch(`${API_URL}/purchases/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        media_id: mediaId,
-        payment_method: paymentMethod || "",
-        payment_reference: paymentReference || "",
-        payment_status: paymentStatus || "success",
-      }),
-    }).catch(() => {});
+    const purchase = await createPurchase(mediaId, {
+      payment_method: paymentMethod,
+      payment_reference: paymentReference,
+      payment_status: paymentStatus || "pending",
+    });
+    purchaseOk = !!purchase;
   }
 
   const isMonthly = buyItem.name.includes("Abonnement Mensuel");
   const isPro = buyItem.name.includes("Abonnement Pro");
-  if ((isMonthly || isPro) && token) {
+  if ((isMonthly || isPro) && token && paymentStatus === "success") {
     const newPlan: UserPlan = isPro ? "pro" : "monthly";
-    await fetch(`${API_URL}/users/profile/`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ plan: newPlan }),
-    }).catch(() => {});
+    try {
+      const res = await fetch(`${getApiUrl()}/users/profile/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ plan: newPlan }),
+      });
+      if (res.ok) setPlan?.(newPlan);
+    } catch {
+      /* ignore */
+    }
   }
+
+  return { ok: purchaseOk };
 }

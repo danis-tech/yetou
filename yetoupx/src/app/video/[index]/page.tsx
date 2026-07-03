@@ -8,16 +8,14 @@ import { useToast } from "@/hooks/useToast";
 import { usePayment } from "@/hooks/usePayment";
 import { useAuth } from "@/contexts/AuthContext";
 import Toast from "@/components/ui/Toast";
+import PageLoader from "@/components/ui/PageLoader";
+import AuthModal from "@/components/modals/AuthModal";
 import VideoPlayer from "@/components/ui/VideoPlayer";
+import { PAY_METHODS, isCardMethod, logoForPayMethod } from "@/lib/payment-methods";
+import type { AuthTab } from "@/types";
+import googleLogo from "@/logo/google.jpg";
 import airtelLogo from "@/logo/airtel.png";
 import moovLogo from "@/logo/moov.png";
-
-const PAY_METHODS = [
-  { name: "Airtel Money", logo: "", available: true },
-  { name: "Moov Money", logo: "", available: true },
-  { name: "Visa", logo: "/visa.svg", available: false },
-  { name: "Mastercard", logo: "/mastercard.svg", available: false },
-];
 
 export default function VideoDetailPage({ params }: { params: Promise<{ index: string }> }) {
   const router = useRouter();
@@ -36,33 +34,41 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
 
   const { toast, toastVisible, toastError, showToast } = useToast();
   const { isLoggedIn } = useAuth();
-  const { externalize, loading: payLoading } = usePayment();
+  const { checkout, loading: payLoading } = usePayment();
 
   const [activePayMethod, setActivePayMethod] = useState("Airtel Money");
   const [clientPhone, setClientPhone] = useState("");
   const [purchased, setPurchased] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<AuthTab>("login");
 
   const handleBuy = useCallback(async () => {
     if (!media) return;
     if (!isLoggedIn) {
-      showToast("Connectez-vous pour effectuer un achat.", true);
+      setAuthTab("login");
+      setAuthOpen(true);
       return;
     }
-    const isMobileMoney = activePayMethod === "Airtel Money" || activePayMethod === "Moov Money";
-    if (isMobileMoney && !clientPhone) {
-      showToast("Veuillez entrer votre numéro de téléphone.", true); return;
-    }
-    setPurchased(true);
-    await externalize({
+    const ok = await checkout({
       mediaId: media.id,
-      buyItem: { name: media.title, price: String(media.price), format: media.license_type, img: media.file_url, _type: "video" },
+      buyItem: { name: media.title, price: String(media.price), format: media.license_type, img: media.file_url, _type: "video", mediaId: media.id },
       method: activePayMethod,
+      onLinkOpened: () => showToast(
+        activePayMethod === "Visa" || activePayMethod === "Mastercard"
+          ? "Redirection vers le paiement sécurisé par carte…"
+          : "Finalisez le paiement dans l'onglet SingPay.",
+      ),
       onError: (msg) => showToast(msg, true),
     });
-  }, [media, activePayMethod, clientPhone, externalize, showToast]);
-  const logoSrc = (m: string) => m === "Airtel Money" ? airtelLogo.src : m === "Moov Money" ? moovLogo.src : m === "Visa" ? "/visa.svg" : "/mastercard.svg";
+    if (ok) setPurchased(true);
+  }, [media, activePayMethod, checkout, showToast, isLoggedIn]);
+  const logoSrc = (m: string) => logoForPayMethod(m, airtelLogo.src, moovLogo.src);
 
-  if (loading) return <Loader />;
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#0A0A0F" }}>
+      <PageLoader message="Chargement de la vidéo…" fullScreen />
+    </div>
+  );
   if (!media) return <NotFound router={router} />;
 
   const d = {
@@ -71,7 +77,7 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
     format: media.license_type, price: media.price,
     province: media.province || "Gabon", camera: media.camera_model || "DJI Mavic 3 Pro",
     codec: media.codec, frameRate: media.frame_rate, bitrate: media.bitrate,
-    downloads: media.downloads, fileUrl: media.file_url,
+    downloads: media.downloads, fileUrl: media.stream_url || media.file_url,
     lens: media.lens, focal: media.focal_length, aperture: media.aperture, iso: media.iso, shutter: media.shutter_speed,
     altitude: media.altitude, tags: media.tags, season: media.season, weather: media.weather,
   };
@@ -128,7 +134,9 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
         <div style={{ position: "relative" }}>
           <div className="detail-sidebar-sticky">
             <div style={{ marginBottom: "20px" }}><div style={{ fontFamily: "Sora", fontSize: "28px", fontWeight: 700, color: "#F0EFEA" }}>{d.price.toLocaleString("fr-FR")} FCFA</div><div style={{ fontSize: "12px", color: "#8A8A95", marginTop: "4px" }}>Paiement sécurisé</div></div>
-            <div className="form-group"><label>Numéro de téléphone</label><input type="tel" placeholder="Ex: 077 00 00 00" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /></div>
+            {isCardMethod(activePayMethod) ? null : (
+              <div className="form-group"><label>Numéro de téléphone</label><input type="tel" placeholder="Ex: 077 00 00 00" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} /></div>
+            )}
             <div style={{ margin: "16px 0" }}><div style={{ fontSize: "12px", color: "#F0EFEA", fontWeight: 500, marginBottom: "8px" }}>Méthode de paiement</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
                 {PAY_METHODS.map((m) => (
@@ -160,7 +168,7 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
               onMouseEnter={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "rgba(200,55,26,0.5)"; el.style.transform = "translateY(-2px)"; }}
               onMouseLeave={(e) => { const el = e.currentTarget as HTMLDivElement; el.style.borderColor = "#2A2A35"; el.style.transform = "translateY(0)"; }}>
               <div style={{ position: "relative" }}>
-                <div style={{ width: "100%", aspectRatio: "16/9", backgroundImage: `url(${m.file_url})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                <div style={{ width: "100%", aspectRatio: "16/9", backgroundImage: `url(${m.preview_url || m.thumbnail_url || ""})`, backgroundSize: "cover", backgroundPosition: "center" }} />
                 <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "36px", height: "36px", borderRadius: "50%", background: "rgba(200,55,26,0.85)", display: "flex", alignItems: "center", justifyContent: "center" }}><i className="ti ti-player-play" style={{ color: "#fff", fontSize: "14px" }}></i></div>
                 <div style={{ position: "absolute", bottom: "8px", right: "8px", background: "rgba(0,0,0,0.75)", color: "#fff", fontSize: "9px", fontWeight: 600, padding: "2px 7px", borderRadius: "4px" }}>{m.duration || "0:30"}</div>
               </div>
@@ -170,14 +178,16 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
         </div>
       </div>}
       <Toast message={toast} visible={toastVisible} isError={toastError} />
+      <AuthModal
+        open={authOpen}
+        authTab={authTab}
+        onClose={() => setAuthOpen(false)}
+        onSwitchTab={setAuthTab}
+        googleLogoSrc={googleLogo.src}
+        showToast={showToast}
+      />
     </div>
   );
-}
-
-function Loader() {
-  return <div style={{ minHeight: "100vh", background: "#0A0A0F", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "16px" }}>
-    <div style={{ width: "48px", height: "48px", borderRadius: "50%", border: "3px solid #2A2A35", borderTopColor: "#C8371A", animation: "spin 0.8s linear infinite" }} /><p style={{ color: "#8A8A95" }}>Chargement...</p>
-  </div>;
 }
 
 function NotFound({ router }: { router: ReturnType<typeof useRouter> }) {

@@ -8,6 +8,7 @@ export interface Photo {
   pcat: string;
   pres: string;
   downloads: number;
+  searchIndex: string;
 }
 
 export interface Video {
@@ -22,6 +23,7 @@ export interface Video {
   vcat: string;
   vdur: string;
   downloads: number;
+  searchIndex: string;
 }
 
 export type Tab = "photos" | "videos" | "tarifs";
@@ -33,15 +35,22 @@ export interface BuyItem {
   price: string;
   format: string;
   img: string;
+  mediaId?: number;
   _type?: "photo" | "video";
 }
 
 export interface PurchasedItem extends BuyItem {
+  id: number;
+  mediaId: number;
   downloadUrl: string;
   date: string;
+  purchasedAt: string;
   type: "photo" | "video";
   downloadCount: number;
   maxDownloads: number;
+  paymentStatus: string;
+  paymentMethod?: string;
+  canDownload: boolean;
 }
 
 export interface PlanLimits {

@@ -7,7 +7,7 @@ import type { Video } from "@/types";
 interface VideoCardProps {
   video: Video;
   idx: number;
-  onBuy: (name: string, price: string, format: string, img: string) => void;
+  onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
   onContextCapture: () => void;
 }
 
@@ -15,6 +15,8 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture }: Video
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hovered, setHovered] = useState(false);
+  const thumbSrc = video.img?.trim() || "";
+  const [thumbLoaded, setThumbLoaded] = useState(!thumbSrc);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = useCallback(() => {
@@ -48,11 +50,25 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture }: Video
     >
       <div className="video-card-inner">
         <div className="video-thumb" onClick={() => router.push(`/video/${video.id}`)}>
-          <div
-            className="video-thumb-img"
-            style={{ backgroundImage: `url(${video.img})` }}
-            onContextMenu={(e) => e.preventDefault()}
-          />
+          {!thumbLoaded && (
+            <div className="media-skeleton media-skeleton-video" style={{ position: "absolute", inset: 0, zIndex: 1 }}>
+              <div className="media-skeleton-shimmer" />
+            </div>
+          )}
+          {thumbSrc ? (
+            <img
+              src={thumbSrc}
+              alt={video.title}
+              loading="lazy"
+              decoding="async"
+              className="video-thumb-img"
+              style={{ opacity: thumbLoaded ? 1 : 0, transition: "opacity 0.35s ease" }}
+              onLoad={() => setThumbLoaded(true)}
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          ) : (
+            <div className="video-thumb-img video-thumb-img--placeholder" aria-hidden="true" />
+          )}
           {video.videoUrl && (
             <video
               ref={videoRef}
@@ -103,7 +119,7 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture }: Video
               className="btn-buy"
               onClick={(e) => {
                 e.stopPropagation();
-                onBuy(video.title, video.price.replace(" FCFA", ""), video.format, video.img);
+                onBuy(video.title, video.price.replace(" FCFA", ""), video.format, video.img, video.id);
               }}
             >
               <i className="ti ti-download"></i> Acheter

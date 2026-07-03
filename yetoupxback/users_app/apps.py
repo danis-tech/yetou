@@ -7,6 +7,7 @@ class UsersAppConfig(AppConfig):
     verbose_name = "Utilisateurs"
 
     def ready(self):
+        import users_app.signals  # noqa: F401
         from django.contrib import admin
 
         # Clean up unused admin registrations

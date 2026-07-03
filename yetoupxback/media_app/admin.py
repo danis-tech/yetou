@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from .models import Media, Purchase, PricingConfig, PaymentLog
+from .models import Media, Purchase, PricingConfig, PaymentLog, PaygateSession
 
 
 class MediaForm(forms.ModelForm):
@@ -168,6 +168,19 @@ class PaymentLogAdmin(admin.ModelAdmin):
         return f'<span style="background:{colors.get(obj.status, "#8A8A95")}20;color:{colors.get(obj.status, obj.status)};padding:3px 10px;border-radius:8px;font-size:10px;font-weight:700">{obj.get_status_display()}</span>'
     status_badge.short_description = "Statut"
     status_badge.allow_tags = True
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(PaygateSession)
+class PaygateSessionAdmin(admin.ModelAdmin):
+    list_display = ("reference", "user", "method", "amount_fcfa", "amount_usd", "status", "created_at")
+    list_filter = ("method", "status")
+    search_fields = ("reference", "user__email")
+    ordering = ("-created_at",)
+    readonly_fields = ("reference", "user", "media", "amount_fcfa", "amount_usd", "method", "plan", "status", "purchase", "created_at")
+    list_per_page = 30
 
     def has_add_permission(self, request):
         return False

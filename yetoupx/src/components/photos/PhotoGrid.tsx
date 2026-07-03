@@ -12,7 +12,7 @@ interface PhotoGridProps {
   onSetPCat: (cat: string) => void;
   onSetPRes: (res: string) => void;
   onSetPSort: (sort: string) => void;
-  onBuy: (name: string, price: string, format: string, img: string) => void;
+  onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
   onContextCapture: () => void;
   onGoTarifs: () => void;
 }

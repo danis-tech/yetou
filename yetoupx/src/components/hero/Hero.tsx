@@ -30,18 +30,20 @@ export default function Hero({ searchQuery, onSearchChange, onQuickFilter, onSea
           </h1>
           <p>Images et vidéos haute définition — paysages, culture, nature, événements gabonais</p>
         </div>
-        <div className="animate-fade-in delay-100">
+        <div className="animate-fade-in delay-100 hero-search-desktop">
           <div className="hero-search">
             <div className="hero-search-field">
               <i className="ti ti-search"></i>
               <input
-                type="text"
+                type="search"
+                enterKeyHint="search"
                 placeholder="Rechercher : Libreville, Ogooué, forêt équatoriale, fête nationale…"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
               />
             </div>
-            <button onClick={onSearch}>Rechercher</button>
+            <button type="button" onClick={onSearch}>Rechercher</button>
           </div>
         </div>
         <div className="animate-fade-in delay-200 hero-tags">

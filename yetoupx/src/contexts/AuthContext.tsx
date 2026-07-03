@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { PurchasedItem, BuyItem, UserPlan } from "@/types";
 import { PLANS } from "@/types";
+import { getApiUrl, getDjangoUrl } from "@/lib/api-url";
 
 interface User {
   id: string;
@@ -19,6 +20,7 @@ interface AuthContextValue {
   login: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; message: string }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
   loginWithGoogle: () => void;
+  completeSession: (access: string, refresh: string) => Promise<boolean>;
   logout: () => void;
   addPurchase: (item: BuyItem) => void;
   setPlan: (plan: UserPlan) => void;
@@ -27,8 +29,6 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 const STORAGE_KEY = "yetou_user";
 const PURCHASES_KEY = "yetou_purchases";
@@ -77,6 +77,18 @@ function clearToken() {
   localStorage.removeItem(REFRESH_KEY);
 }
 
+async function fetchProfile(accessToken: string): Promise<User | null> {
+  const res = await fetch(`${getApiUrl()}/users/profile/`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return { id: String(data.id), name: data.name || data.email, email: data.email, plan: data.plan || "none" };
+}
+
 async function apiFetch(path: string, options: RequestInit = {}) {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -85,12 +97,12 @@ async function apiFetch(path: string, options: RequestInit = {}) {
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${getApiUrl()}${path}`, { ...options, headers });
   if (res.status === 401) {
     const refreshed = await refreshToken();
     if (refreshed) {
       headers["Authorization"] = `Bearer ${getToken()}`;
-      return fetch(`${API_URL}${path}`, { ...options, headers });
+      return fetch(`${getApiUrl()}${path}`, { ...options, headers });
     }
   }
   return res;
@@ -100,7 +112,7 @@ async function refreshToken(): Promise<boolean> {
   const refresh = localStorage.getItem(REFRESH_KEY);
   if (!refresh) return false;
   try {
-    const res = await fetch(`${API_URL}/auth/token/refresh/`, {
+    const res = await fetch(`${getApiUrl()}/auth/token/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh }),
@@ -118,7 +130,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [purchasedItems, setPurchasedItems] = useState<PurchasedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [hydrated, setHydrated] = useState(false);
+
+  const completeSession = useCallback(async (access: string, refresh: string): Promise<boolean> => {
+    saveToken(access, refresh);
+    const profile = await fetchProfile(access);
+    if (!profile) {
+      clearToken();
+      saveUser(null);
+      setUser(null);
+      return false;
+    }
+    setUser(profile);
+    saveUser(profile);
+    return true;
+  }, []);
 
   useEffect(() => {
     const token = getToken();
@@ -127,15 +152,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cached) {
         setUser(cached);
         setPurchasedItems(loadPurchases());
-        setIsLoading(false);
       }
-      apiFetch("/users/profile/")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) {
-            const u: User = { id: data.id, name: data.name, email: data.email, plan: data.plan };
-            setUser(u);
-            saveUser(u);
+      fetchProfile(token)
+        .then((profile) => {
+          if (profile) {
+            setUser(profile);
+            saveUser(profile);
           } else {
             clearToken();
             saveUser(null);
@@ -143,50 +165,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         })
         .catch(() => {})
-        .finally(() => {
-          setIsLoading(false);
-          setHydrated(true);
-        });
+        .finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
-      setHydrated(true);
+      setPurchasedItems(loadPurchases());
     }
-    if (!token) setPurchasedItems(loadPurchases());
   }, []);
 
-  const login = useCallback(async (email: string, password: string, rememberMe: boolean): Promise<{ success: boolean; message: string }> => {
+  const login = useCallback(async (email: string, password: string, _rememberMe: boolean): Promise<{ success: boolean; message: string }> => {
     try {
-      const res = await fetch(`${API_URL}/auth/login/`, {
+      const res = await fetch(`${getApiUrl()}/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       });
       const data = await res.json();
       if (!res.ok) {
-        return { success: false, message: data.detail || data.non_field_errors?.[0] || "Email ou mot de passe incorrect." };
+        const msg = data.non_field_errors?.[0] || data.detail || data.email?.[0] || "Email ou mot de passe incorrect.";
+        return { success: false, message: msg };
       }
-      saveToken(data.access, data.refresh);
-      if (rememberMe) {
-        localStorage.setItem(TOKEN_KEY, data.access);
-        localStorage.setItem(REFRESH_KEY, data.refresh);
-      }
-      const profileRes = await apiFetch("/users/profile/");
-      const profile = await profileRes.json();
-      const u: User = { id: profile.id, name: profile.name, email: profile.email, plan: profile.plan };
-      setUser(u);
-      saveUser(u);
+      const ok = await completeSession(data.access, data.refresh);
+      if (!ok) return { success: false, message: "Connexion réussie mais impossible de charger le profil." };
       return { success: true, message: "Connexion réussie !" };
     } catch {
       return { success: false, message: "Erreur réseau. Vérifiez que le serveur Django est lancé." };
     }
-  }, []);
+  }, [completeSession]);
 
   const register = useCallback(async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
-      const res = await fetch(`${API_URL}/auth/register/`, {
+      const res = await fetch(`${getApiUrl()}/auth/register/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password1: password, password2: password }),
+        body: JSON.stringify({
+          name,
+          email: email.trim().toLowerCase(),
+          password1: password,
+          password2: password,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -195,25 +211,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           : "Erreur lors de l'inscription.";
         return { success: false, message: msg };
       }
-      saveToken(data.access, data.refresh);
-      const u: User = { id: data.user?.id || "new", name, email, plan: "none" };
-      setUser(u);
-      saveUser(u);
+      const ok = await completeSession(data.access, data.refresh);
+      if (!ok) return { success: false, message: "Compte créé mais impossible de charger le profil." };
       return { success: true, message: "Compte créé avec succès !" };
     } catch {
       return { success: false, message: "Erreur réseau. Vérifiez que le serveur Django est lancé." };
     }
-  }, []);
+  }, [completeSession]);
 
   const loginWithGoogle = useCallback(() => {
-    // Mémoriser la page actuelle pour y revenir après le callback Google
     if (typeof window !== "undefined") {
       localStorage.setItem("yetou_return_url", window.location.href);
     }
-    const djangoUrl = API_URL.replace("/api", "");
-    const frontendUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const callbackUrl = `${frontendUrl}/auth/callback`;
-    window.location.href = `${djangoUrl}/accounts/google/login/?process=login&next=/api/auth/google/?frontend=${encodeURIComponent(callbackUrl)}`;
+    const djangoUrl = getDjangoUrl();
+    const frontendUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const callback = `${djangoUrl}/api/auth/google/?frontend=${encodeURIComponent(frontendUrl)}`;
+    window.location.href = `${djangoUrl}/accounts/google/login/?process=login&next=${encodeURIComponent(callback)}`;
   }, []);
 
   const logout = useCallback(() => {
@@ -226,15 +239,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const plan = user?.plan || "none";
     const maxDownloads = PLANS[plan].maxDownloads;
     const purchased: PurchasedItem = {
+      id: 0,
+      mediaId: item.mediaId || 0,
       name: item.name,
       price: item.price,
       format: item.format,
       img: item.img,
       downloadUrl: item.img,
       date: new Date().toLocaleDateString("fr-FR"),
+      purchasedAt: new Date().toISOString(),
       type: item._type || "photo",
       downloadCount: 0,
       maxDownloads: maxDownloads === -1 ? 999 : maxDownloads,
+      paymentStatus: "success",
+      canDownload: true,
     };
     setPurchasedItems((prev) => {
       const next = [purchased, ...prev];
@@ -276,7 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, isLoggedIn: !!user, isLoading,
-      purchasedItems, login, register, loginWithGoogle, logout,
+      purchasedItems, login, register, loginWithGoogle, completeSession, logout,
       addPurchase, setPlan: setPlanHandler, downloadMedia, remainingDownloads,
     }}>
       {children}

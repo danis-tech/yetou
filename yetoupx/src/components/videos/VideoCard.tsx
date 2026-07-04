@@ -3,20 +3,26 @@
 import { useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Video } from "@/types";
+import LikeButton from "@/components/ui/LikeButton";
 
 interface VideoCardProps {
   video: Video;
   idx: number;
   onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
   onContextCapture: () => void;
+  onToggleLike: (mediaId: number, onUpdate: (likes: number, isLiked: boolean) => void) => void;
+  likeLoading?: boolean;
+  carousel?: boolean;
 }
 
-export default function VideoCard({ video, idx, onBuy, onContextCapture }: VideoCardProps) {
+export default function VideoCard({ video, idx, onBuy, onContextCapture, onToggleLike, likeLoading, carousel }: VideoCardProps) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hovered, setHovered] = useState(false);
   const thumbSrc = video.img?.trim() || "";
   const [thumbLoaded, setThumbLoaded] = useState(!thumbSrc);
+  const [likes, setLikes] = useState(video.likes);
+  const [isLiked, setIsLiked] = useState(video.isLiked);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = useCallback(() => {
@@ -40,10 +46,17 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture }: Video
     }
   }, []);
 
+  const handleLike = () => {
+    onToggleLike(video.id, (newLikes, newIsLiked) => {
+      setLikes(newLikes);
+      setIsLiked(newIsLiked);
+    });
+  };
+
   return (
     <div
-      className="video-card"
-      style={{ animationDelay: `${idx * 0.08}s` }}
+      className={`video-card${carousel ? " video-card--carousel" : ""}`}
+      style={carousel ? undefined : { animationDelay: `${idx * 0.08}s` }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onContextMenu={(e) => { e.preventDefault(); onContextCapture(); }}
@@ -92,7 +105,7 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture }: Video
           )}
           <div className="watermark-sm">yétou</div>
           <div className="video-play"><i className="ti ti-player-play"></i></div>
-          <div className="video-res">4K</div>
+          <div className="video-res">{video.vres}</div>
           <div className="video-dur">{video.duration}</div>
         </div>
         <div className="video-body">
@@ -106,8 +119,12 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture }: Video
               <span className="video-genre">
                 {video.duration.includes("1:") ? "Long format" : "Court format"}
               </span>
-              <span className="video-genre">
-                <i className="ti ti-download"></i> {video.downloads}
+              <span className="video-genre video-genre--stats">
+                <LikeButton likes={likes} isLiked={isLiked} loading={likeLoading} onToggle={handleLike} />
+                <span className="video-stat">
+                  <i className="ti ti-download" />
+                  {video.downloads}
+                </span>
               </span>
             </div>
           </div>

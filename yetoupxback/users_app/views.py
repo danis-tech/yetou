@@ -9,7 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from media_app.models import Purchase
 from media_app.serializers import PurchaseSerializer
 from .serializers import UserSerializer, NotificationSerializer
-from .notifications import notify_plan_change, sync_purchase_notifications
+from .notifications import sync_purchase_notifications
 from .models import Notification
 
 
@@ -28,12 +28,9 @@ def profile(request):
         return Response(UserSerializer(request.user).data)
 
     if request.method == "PATCH":
-        old_plan = request.user.plan
         serializer = UserSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
-            user = serializer.save()
-            if "plan" in request.data and user.plan != old_plan:
-                notify_plan_change(user, old_plan, user.plan)
+            serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=400)
 

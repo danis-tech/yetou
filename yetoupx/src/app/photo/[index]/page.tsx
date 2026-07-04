@@ -2,7 +2,7 @@
 
 import { useState, use, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { fetchMediaById, fetchMedia } from "@/services/api";
+import { fetchMediaById, fetchMedia, toggleMediaLike } from "@/services/api";
 import type { ApiMedia } from "@/services/api";
 import { useToast } from "@/hooks/useToast";
 import { usePayment } from "@/hooks/usePayment";
@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Toast from "@/components/ui/Toast";
 import PageLoader from "@/components/ui/PageLoader";
 import AuthModal from "@/components/modals/AuthModal";
+import LikeButton from "@/components/ui/LikeButton";
 import { PAY_METHODS, isCardMethod, logoForPayMethod } from "@/lib/payment-methods";
 import type { AuthTab } from "@/types";
 import googleLogo from "@/logo/google.jpg";
@@ -43,6 +44,16 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
   const [purchased, setPurchased] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<AuthTab>("login");
+  const [likes, setLikes] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  useEffect(() => {
+    if (media) {
+      setLikes(media.likes_count ?? 0);
+      setIsLiked(media.is_liked ?? false);
+    }
+  }, [media]);
 
   const handleBuy = useCallback(async () => {
     if (!media) return;
@@ -64,6 +75,29 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
     });
     if (ok) setPurchased(true);
   }, [media, activePayMethod, checkout, showToast, isLoggedIn]);
+
+  const handleLike = useCallback(async () => {
+    if (!media) return;
+    if (!isLoggedIn) {
+      setAuthTab("login");
+      setAuthOpen(true);
+      return;
+    }
+    setLikeLoading(true);
+    try {
+      const result = await toggleMediaLike(media.id);
+      if (result) {
+        setLikes(result.likes_count);
+        setIsLiked(result.is_liked);
+      } else {
+        showToast("Impossible de mettre à jour le like.", true);
+      }
+    } catch {
+      showToast("Erreur réseau lors du like.", true);
+    } finally {
+      setLikeLoading(false);
+    }
+  }, [media, isLoggedIn, showToast]);
 
   const logoSrc = (m: string) => logoForPayMethod(m, airtelLogo.src, moovLogo.src);
 
@@ -103,7 +137,10 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
           <h1>{display.title}</h1>
           <div className="detail-topbar-sub">{display.details}</div>
         </div>
-        <div className="detail-topbar-price">{display.priceStr}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <LikeButton likes={likes} isLiked={isLiked} loading={likeLoading} size="md" onToggle={handleLike} />
+          <div className="detail-topbar-price">{display.priceStr}</div>
+        </div>
       </div>
 
       <div className="detail-hero">
@@ -113,7 +150,7 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
           {!purchased && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 5 }}><span style={{ fontFamily: "Sora, sans-serif", fontSize: "3rem", fontWeight: 700, color: "rgba(255,255,255,0.1)", letterSpacing: "0.3em", transform: "rotate(-15deg)" }}>yétou</span></div>}
           {!purchased && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.7), transparent)", padding: "20px 16px 10px", textAlign: "center" }}><p style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px" }}>Achetez cette photo pour la télécharger sans filigrane</p></div>}
           {purchased && <div style={{ position: "absolute", top: "12px", left: "12px", zIndex: 20, background: "rgba(34,197,94,0.9)", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "5px 14px", borderRadius: "8px" }}><i className="ti ti-circle-check" style={{ marginRight: "5px" }}></i>ACHETÉE</div>}
-          <div style={{ position: "absolute", top: "12px", left: purchased ? "auto" : "12px", right: purchased ? "12px" : "auto", background: display.is4k ? "rgba(200,55,26,0.95)" : "rgba(20,20,26,0.85)", backdropFilter: "blur(6px)", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "4px 12px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.08)" }}>{display.is4k ? "4K" : "HD 1080p"}</div>
+          <div style={{ position: "absolute", top: "12px", left: purchased ? "auto" : "12px", right: purchased ? "12px" : "auto", background: display.is4k ? "rgba(200,55,26,0.95)" : "rgba(20,20,26,0.85)", backdropFilter: "blur(6px)", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "4px 12px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.08)" }}>{media.quality_display}</div>
         </div>
       </div>
 
@@ -128,6 +165,7 @@ export default function PhotoDetailPage({ params }: { params: Promise<{ index: s
               { icon: "ti ti-drone", label: "Drone", value: display.camera },
               { icon: "ti ti-map-pin", label: "Province", value: display.province },
               { icon: "ti ti-download", label: "Téléchargements", value: String(display.downloads) },
+              { icon: "ti ti-heart", label: "Likes", value: String(likes) },
               { icon: "ti ti-shield-check", label: "Licence", value: "Commerciale · Illimitée" },
             ].map((c, i) => (
               <div key={i} className="detail-info-card">

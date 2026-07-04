@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePricing, formatFcfa } from "@/hooks/usePricing";
 
 interface PlansGridProps {
   onSelectPlan: (plan: string) => void;
@@ -8,19 +9,25 @@ interface PlansGridProps {
 }
 
 export default function PlansGrid({ onSelectPlan, onBrowse }: PlansGridProps) {
+  const { pricing } = usePricing();
+  const allRows = [...pricing.pricing.photo, ...pricing.pricing.video];
+  const minPrice = allRows.length ? Math.min(...allRows.map((r) => r.price)) : 0;
+
   return (
     <div className="plans-grid">
       <div className="plan">
         <div className="plan-icon"><i className="ti ti-photo"></i></div>
         <div className="plan-name">Achat à l&apos;unité</div>
-        <div className="plan-price">dès 1 500 <sub>FCFA</sub></div>
+        <div className="plan-price">dès {formatFcfa(minPrice).replace(" FCFA", "")} <sub>FCFA</sub></div>
         <div className="plan-usd">Sans abonnement · Sans engagement</div>
         <div className="plan-divider"></div>
         <ul className="plan-feats">
-          <li><i className="ti ti-check"></i>Photo HD 1080p — 1 500 FCFA</li>
-          <li><i className="ti ti-check"></i>Photo 4K — 3 000 FCFA</li>
-          <li><i className="ti ti-check"></i>Vidéo 30 sec — 5 000 FCFA</li>
-          <li><i className="ti ti-check"></i>Vidéo 1 min — 10 000 FCFA</li>
+          {pricing.pricing.photo.map((row) => (
+            <li key={`photo-${row.quality}`}><i className="ti ti-check"></i>Photo {row.quality_display} — {formatFcfa(row.price)}</li>
+          ))}
+          {pricing.pricing.video.map((row) => (
+            <li key={`video-${row.quality}`}><i className="ti ti-check"></i>Vidéo {row.quality_display} — {formatFcfa(row.price)}</li>
+          ))}
           <li><i className="ti ti-check"></i>Licence commerciale incluse</li>
           <li><i className="ti ti-check"></i>Téléchargement immédiat</li>
           <li className="off"><i className="ti ti-x"></i>Accès illimité</li>

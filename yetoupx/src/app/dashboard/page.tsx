@@ -1,14 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchMedia, getCachedMedia } from "@/services/api";
 import { useToast } from "@/hooks/useToast";
 import { usePayment } from "@/hooks/usePayment";
-import { usePhotoFilter, useVideoFilter } from "@/hooks/useMediaFilter";
-import { buildSearchIndex } from "@/hooks/useMediaSearch";
-import type { BuyItem, PurchasedItem, UserPlan, PlanLimits, Photo, Video } from "@/types";
+import { usePhotoFilters, useVideoFilters } from "@/hooks/useMediaFilter";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useServerMediaList } from "@/hooks/useServerMediaList";
+import { useMediaLikes } from "@/hooks/useMediaLikes";
+import { mapApiMediaToPhoto, mapApiMediaToVideo } from "@/lib/media-mapper";
+import type { BuyItem, PurchasedItem, UserPlan, PlanLimits } from "@/types";
 import { PLANS } from "@/types";
 import PhotoGrid from "@/components/photos/PhotoGrid";
 import VideoGrid from "@/components/videos/VideoGrid";
@@ -20,7 +22,6 @@ import DashboardCatalogueNav from "@/components/dashboard/DashboardCatalogueNav"
 import type { DashboardTab } from "@/components/dashboard/DashboardBottomNav";
 import { fetchDashboardSummary, markNotificationRead, markAllNotificationsRead } from "@/services/api";
 import type { DashboardSummary, ApiPurchase } from "@/services/api";
-import { filterPhotosBySearch, filterVideosBySearch } from "@/hooks/useMediaSearch";
 import airtelLogo from "@/logo/airtel.png";
 import moovLogo from "@/logo/moov.png";
 
@@ -96,59 +97,45 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Catalogue state
+  // Catalogue — requêtes serveur dynamiques
   const [catalogueTab, setCatalogueTab] = useState<"photos" | "videos">("photos");
-  const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
-  const [allVideos, setAllVideos] = useState<Video[]>([]);
-  const [catalogueLoading, setCatalogueLoading] = useState(true);
+  const photos = usePhotoFilters();
+  const videos = useVideoFilters();
+  const debouncedCatalogueSearch = useDebouncedValue(catalogueSearch, 150);
+  const catalogueEnabled = activeTab === "catalogue";
 
-  useEffect(() => {
-    const cachedP = getCachedMedia("photo");
-    const cachedV = getCachedMedia("video");
-    if (cachedP?.length) {
-      setAllPhotos(cachedP.map((m) => ({
-        id: m.id, title: m.title, details: `${m.quality_display} · ${m.resolution || m.file_size_display} · ${m.category_display}`,
-        format: m.license_type, price: `${m.price} FCFA`,
-        img: m.preview_url || m.thumbnail_url || m.stream_url || m.file_url,
-        pcat: m.category, pres: m.quality.toLowerCase(), downloads: m.downloads,
-        searchIndex: buildSearchIndex(m.title, m.category_display, m.category, m.quality, m.resolution, m.province, m.city),
-      })));
-    }
-    if (cachedV?.length) {
-      setAllVideos(cachedV.map((m) => ({
-        id: m.id, title: m.title, details: `Vidéo ${m.duration || "0:30"} · ${m.quality_display}`,
-        format: "MP4", duration: m.duration || "0:30", price: `${m.price} FCFA`,
-        img: m.preview_url || m.thumbnail_url || "",
-        videoUrl: m.stream_url || m.file_url,
-        vcat: m.category, vdur: m.duration?.includes("1:") ? "60" : "30", downloads: m.downloads,
-        searchIndex: buildSearchIndex(m.title, m.category_display, m.category, m.quality, m.duration, m.province, m.city),
-      })));
-    }
-    if (cachedP?.length && cachedV?.length) setCatalogueLoading(false);
+  const cataloguePhotoQuery = useMemo(() => ({
+    type: "photo" as const,
+    category: photos.activePCat,
+    resolution: photos.activePRes,
+    search: debouncedCatalogueSearch,
+    sort: photos.pSort,
+  }), [photos.activePCat, photos.activePRes, debouncedCatalogueSearch, photos.pSort]);
 
-    Promise.all([fetchMedia("photo"), fetchMedia("video")]).then(([p, v]) => {
-      setAllPhotos(p.map((m) => ({
-        id: m.id, title: m.title, details: `${m.quality_display} · ${m.resolution || m.file_size_display} · ${m.category_display}`,
-        format: m.license_type, price: `${m.price} FCFA`,
-        img: m.preview_url || m.thumbnail_url || m.stream_url || m.file_url,
-        pcat: m.category, pres: m.quality.toLowerCase(), downloads: m.downloads,
-        searchIndex: buildSearchIndex(m.title, m.category_display, m.category, m.quality, m.resolution, m.province, m.city),
-      })));
-      setAllVideos(v.map((m) => ({
-        id: m.id, title: m.title, details: `Vidéo ${m.duration || "0:30"} · ${m.quality_display}`,
-        format: "MP4", duration: m.duration || "0:30", price: `${m.price} FCFA`,
-        img: m.preview_url || m.thumbnail_url || "",
-        videoUrl: m.stream_url || m.file_url,
-        vcat: m.category, vdur: m.duration?.includes("1:") ? "60" : "30", downloads: m.downloads,
-        searchIndex: buildSearchIndex(m.title, m.category_display, m.category, m.quality, m.duration, m.province, m.city),
-      })));
-    }).catch(() => {}).finally(() => setCatalogueLoading(false));
-  }, []);
+  const catalogueVideoQuery = useMemo(() => ({
+    type: "video" as const,
+    category: videos.activeVCat,
+    duration: videos.activeVDur,
+    resolution: videos.activeVRes,
+    search: debouncedCatalogueSearch,
+    sort: videos.vSort,
+  }), [videos.activeVCat, videos.activeVDur, videos.activeVRes, debouncedCatalogueSearch, videos.vSort]);
 
-  const photos = usePhotoFilter(allPhotos);
-  const videos = useVideoFilter(allVideos);
-  const cataloguePhotos = filterPhotosBySearch(photos.filtered, catalogueSearch);
-  const catalogueVideos = filterVideosBySearch(videos.filtered, catalogueSearch);
+  const { items: cataloguePhotos, count: cataloguePhotoCount, loading: cataloguePhotosLoading, refreshing: cataloguePhotosRefreshing } = useServerMediaList({
+    params: cataloguePhotoQuery,
+    mapItem: mapApiMediaToPhoto,
+    enabled: catalogueEnabled,
+  });
+
+  const { items: catalogueVideos, count: catalogueVideoCount, loading: catalogueVideosLoading, refreshing: catalogueVideosRefreshing } = useServerMediaList({
+    params: catalogueVideoQuery,
+    mapItem: mapApiMediaToVideo,
+    enabled: catalogueEnabled,
+  });
+
+  const catalogueLoading = (cataloguePhotosLoading && cataloguePhotos.length === 0)
+    || (catalogueVideosLoading && catalogueVideos.length === 0);
+  const catalogueRefreshing = cataloguePhotosRefreshing || catalogueVideosRefreshing;
 
   // Buy modal
   const [buyItem, setBuyItem] = useState<BuyItem | null>(null);
@@ -184,6 +171,11 @@ export default function DashboardPage() {
     showToast("Capture interdite. Ce média est protégé par yétou.", true);
   }, [showToast]);
 
+  const { toggleLike, loadingId: likeLoadingId } = useMediaLikes(
+    undefined,
+    (msg) => showToast(msg, true),
+  );
+
   if (isLoading || (!isLoggedIn && typeof window !== "undefined" && localStorage.getItem("yetou_token"))) {
     return (
       <div style={{ minHeight: "100vh", background: "#0A0A0F", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" }}>
@@ -214,6 +206,7 @@ export default function DashboardPage() {
         sidebarOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
         onLogout={() => { logout(); router.push("/"); }}
+        onGoHome={() => router.push("/")}
         activeTab={activeTab}
       />
 
@@ -268,10 +261,13 @@ export default function DashboardPage() {
           {activeTab === "catalogue" && (
             <CatalogueTab catalogueTab={catalogueTab} setCatalogueTab={setCatalogueTab} photos={photos} videos={videos}
               cataloguePhotos={cataloguePhotos} catalogueVideos={catalogueVideos}
+              cataloguePhotoCount={cataloguePhotoCount} catalogueVideoCount={catalogueVideoCount}
               searchQuery={catalogueSearch} onSearchChange={setCatalogueSearch}
               loading={catalogueLoading}
               onBuy={openBuy} onContextCapture={longPressCaptureToast}
-              onGoTarifs={() => setActiveTab("plan")} />
+              onGoTarifs={() => setActiveTab("plan")}
+              onToggleLike={toggleLike} likeLoadingId={likeLoadingId}
+              catalogueRefreshing={catalogueRefreshing} />
           )}
           {activeTab === "plan" && <PlanTab user={user} plan={plan} router={router} />}
           {activeTab === "account" && (
@@ -302,8 +298,9 @@ export default function DashboardPage() {
 }
 
 /* ─── Mobile Header ─── */
-function MobileHeader({ sidebarOpen, onToggle, onLogout, activeTab }: {
-  sidebarOpen: boolean; onToggle: () => void; onLogout: () => void; activeTab: string;
+function MobileHeader({ sidebarOpen, onToggle, onLogout, onGoHome, activeTab }: {
+  sidebarOpen: boolean; onToggle: () => void; onLogout: () => void;
+  onGoHome: () => void; activeTab: string;
 }) {
   const labels: Record<string, string> = {
     home: "Accueil",
@@ -316,9 +313,14 @@ function MobileHeader({ sidebarOpen, onToggle, onLogout, activeTab }: {
         <i className={`ti ${sidebarOpen ? "ti-x" : "ti-menu-2"}`}></i>
       </button>
       <span className="dash-mobile-header-title">{labels[activeTab] || "Dashboard"}</span>
-      <button type="button" className="dash-mobile-header-btn dash-mobile-header-btn--muted" onClick={onLogout} aria-label="Déconnexion">
-        <i className="ti ti-logout"></i>
-      </button>
+      <div className="dash-mobile-header-actions">
+        <button type="button" className="dash-mobile-header-btn dash-mobile-header-btn--home" onClick={onGoHome} aria-label="Retour au site">
+          <i className="ti ti-home-2"></i>
+        </button>
+        <button type="button" className="dash-mobile-header-btn dash-mobile-header-btn--muted" onClick={onLogout} aria-label="Déconnexion">
+          <i className="ti ti-logout"></i>
+        </button>
+      </div>
     </div>
   );
 }
@@ -341,10 +343,14 @@ function Sidebar({ user, plan, activeTab, purchasesCount, open, onSelectTab, onL
   ];
   return (
     <nav className={`dash-sidebar ${open ? "open" : ""}`}>
-      <div className="dash-sidebar-logo" onClick={() => router.push("/")}>
+      <div className="dash-sidebar-logo" onClick={() => router.push("/")} title="Retour au site principal">
         yé<em>tou</em>
         <span>Espace client</span>
       </div>
+      <button type="button" className="dash-sidebar-back-site" onClick={() => router.push("/")}>
+        <i className="ti ti-arrow-left"></i>
+        <span>Retour au site</span>
+      </button>
       <div className="dash-sidebar-user">
         <div className="dash-sidebar-avatar">{user.name.charAt(0).toUpperCase()}</div>
         <div className="dash-sidebar-name">{user.name}</div>
@@ -485,14 +491,18 @@ function PurchasesTab({ purchases, loading, router, onDownload, remainingDownloa
 }
 
 /* ─── Catalogue Tab ─── */
-function CatalogueTab({ catalogueTab, setCatalogueTab, photos, videos, cataloguePhotos, catalogueVideos, searchQuery, onSearchChange, loading, onBuy, onContextCapture, onGoTarifs }: {
+function CatalogueTab({ catalogueTab, setCatalogueTab, photos, videos, cataloguePhotos, catalogueVideos, cataloguePhotoCount, catalogueVideoCount, searchQuery, onSearchChange, loading, catalogueRefreshing, onBuy, onContextCapture, onGoTarifs, onToggleLike, likeLoadingId }: {
   catalogueTab: "photos" | "videos"; setCatalogueTab: (t: "photos" | "videos") => void;
-  photos: ReturnType<typeof usePhotoFilter>; videos: ReturnType<typeof useVideoFilter>;
-  cataloguePhotos: ReturnType<typeof filterPhotosBySearch>; catalogueVideos: ReturnType<typeof filterVideosBySearch>;
+  photos: ReturnType<typeof usePhotoFilters>; videos: ReturnType<typeof useVideoFilters>;
+  cataloguePhotos: import("@/types").Photo[];
+  catalogueVideos: import("@/types").Video[];
+  cataloguePhotoCount: number; catalogueVideoCount: number;
   searchQuery: string; onSearchChange: (q: string) => void;
-  loading: boolean;
+  loading: boolean; catalogueRefreshing: boolean;
   onBuy: (n: string, p: string, f: string, img: string, t: "photo" | "video", mediaId?: number) => void; onContextCapture: () => void;
   onGoTarifs: () => void;
+  onToggleLike: (mediaId: number, onUpdate: (likes: number, isLiked: boolean) => void) => void;
+  likeLoadingId: number | null;
 }) {
   if (loading) {
     return <div className="dash-loading"><i className="ti ti-loader dash-loading-icon"></i><p>Chargement du catalogue...</p></div>;
@@ -505,8 +515,8 @@ function CatalogueTab({ catalogueTab, setCatalogueTab, photos, videos, catalogue
 
       <DashboardCatalogueNav
         catalogueTab={catalogueTab}
-        photosCount={cataloguePhotos.length}
-        videosCount={catalogueVideos.length}
+        photosCount={cataloguePhotoCount}
+        videosCount={catalogueVideoCount}
         searchQuery={searchQuery}
         onTabChange={setCatalogueTab}
         onSearchChange={onSearchChange}
@@ -515,13 +525,15 @@ function CatalogueTab({ catalogueTab, setCatalogueTab, photos, videos, catalogue
 
       <div className="dash-catalogue-content">
         {catalogueTab === "photos" ? (
-          <PhotoGrid photos={cataloguePhotos} activePCat={photos.activePCat} activePRes={photos.activePRes} pSort={photos.pSort}
-            onSetPCat={photos.setActivePCat} onSetPRes={photos.setActivePRes} onSetPSort={photos.setPSort}
-            onBuy={(n, p, f, img, id) => onBuy(n, p, f, img, "photo", id)} onContextCapture={onContextCapture} onGoTarifs={onGoTarifs} />
+          <PhotoGrid photos={cataloguePhotos} resultCount={cataloguePhotoCount} refreshing={catalogueRefreshing} activePCat={photos.activePCat} activePRes={photos.activePRes} pSort={photos.pSort}
+            onSetPCat={(cat) => { photos.setActivePCat(cat); onSearchChange(""); }} onSetPRes={photos.setActivePRes} onSetPSort={photos.setPSort}
+            onBuy={(n, p, f, img, id) => onBuy(n, p, f, img, "photo", id)} onContextCapture={onContextCapture} onGoTarifs={onGoTarifs}
+            onToggleLike={onToggleLike} likeLoadingId={likeLoadingId} />
         ) : (
-          <VideoGrid videos={catalogueVideos} activeVCat={videos.activeVCat} activeVDur={videos.activeVDur} vSort={videos.vSort}
-            onSetVCat={videos.setActiveVCat} onSetVDur={videos.setActiveVDur} onSetVSort={videos.setVSort}
-            onBuy={(n, p, f, img, id) => onBuy(n, p, f, img, "video", id)} onContextCapture={onContextCapture} onGoTarifs={onGoTarifs} />
+          <VideoGrid videos={catalogueVideos} resultCount={catalogueVideoCount} refreshing={catalogueRefreshing} activeVCat={videos.activeVCat} activeVDur={videos.activeVDur} activeVRes={videos.activeVRes} vSort={videos.vSort}
+            onSetVCat={(cat) => { videos.setActiveVCat(cat); onSearchChange(""); }} onSetVDur={videos.setActiveVDur} onSetVRes={videos.setActiveVRes} onSetVSort={videos.setVSort}
+            onBuy={(n, p, f, img, id) => onBuy(n, p, f, img, "video", id)} onContextCapture={onContextCapture} onGoTarifs={onGoTarifs}
+            onToggleLike={onToggleLike} likeLoadingId={likeLoadingId} />
         )}
       </div>
     </div>

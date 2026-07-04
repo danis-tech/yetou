@@ -6,9 +6,12 @@ import time
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
+from django.db.models import Count, Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django.conf import settings
-from .models import Media, Purchase, PaymentLog, PaygateSession
+from .models import Media, MediaLike, Purchase, PaymentLog, PaygateSession, PricingConfig, Quality
+from .filters import apply_media_filters, apply_media_order
+from .pagination import MediaPagination
 from .fedapay import (
     create_payment as create_fedapay_payment,
     verify_transaction,
@@ -28,21 +31,68 @@ PLAN_DOWNLOADS = {"none": 1, "monthly": 10, "pro": -1}
 class MediaViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Media.objects.filter(status="published")
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    pagination_class = MediaPagination
 
     def get_serializer_class(self):
         if self.action == "list":
             return MediaListSerializer
         return MediaDetailSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
+
     def get_queryset(self):
         qs = super().get_queryset()
-        media_type = self.request.query_params.get("type")
-        category = self.request.query_params.get("category")
-        if media_type in ("photo", "video"):
-            qs = qs.filter(type=media_type)
-        if category:
-            qs = qs.filter(category=category)
-        return qs
+        qs = apply_media_filters(qs, self.request.query_params)
+        qs = qs.annotate(likes_count=Count("likes", distinct=True))
+
+        user = self.request.user
+        if user.is_authenticated:
+            qs = qs.annotate(
+                _user_liked=Exists(
+                    MediaLike.objects.filter(media_id=OuterRef("pk"), user_id=user.id)
+                )
+            )
+
+        return apply_media_order(qs, self.request.query_params)
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def like(self, request, pk=None):
+        media = self.get_object()
+        like_obj, created = MediaLike.objects.get_or_create(user=request.user, media=media)
+        if not created:
+            like_obj.delete()
+            liked = False
+        else:
+            liked = True
+
+        likes_count = media.likes.count()
+        return Response({"likes_count": likes_count, "is_liked": liked})
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def pricing_table(request):
+    """Grille tarifaire publique : qualités disponibles + prix par type et qualité.
+
+    Permet au frontend d'afficher des filtres/tarifs 100% dynamiques (ajout d'une
+    qualité ou modification d'un prix dans l'admin = mise à jour immédiate du site).
+    """
+    qualities = [
+        {"slug": q.slug, "name": q.name}
+        for q in Quality.objects.filter(is_active=True).order_by("order", "name")
+    ]
+    pricing = {"photo": [], "video": []}
+    for config in PricingConfig.get_pricing_table():
+        pricing.setdefault(config.media_type, []).append({
+            "quality": config.quality,
+            "quality_display": config.get_quality_display(),
+            "price": config.price,
+            "description": config.description,
+        })
+    return Response({"qualities": qualities, "pricing": pricing})
 
 
 class PurchaseViewSet(viewsets.ModelViewSet):

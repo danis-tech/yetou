@@ -8,6 +8,9 @@ export interface Photo {
   pcat: string;
   pres: string;
   downloads: number;
+  likes: number;
+  isLiked: boolean;
+  createdAt: string;
   searchIndex: string;
 }
 
@@ -22,7 +25,11 @@ export interface Video {
   videoUrl: string;
   vcat: string;
   vdur: string;
+  vres: string;
   downloads: number;
+  likes: number;
+  isLiked: boolean;
+  createdAt: string;
   searchIndex: string;
 }
 

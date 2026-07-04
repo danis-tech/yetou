@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from media_app.views import (
     MediaViewSet,
     PurchaseViewSet,
+    pricing_table,
     log_payment,
     singpay_webhook,
     fedapay_initiate,
@@ -36,6 +37,7 @@ urlpatterns = [
     path("api/notifications/", notifications_list, name="notifications-list"),
     path("api/notifications/mark-all-read/", notifications_mark_all_read, name="notifications-mark-all-read"),
     path("api/notifications/<int:pk>/", notification_detail, name="notification-detail"),
+    path("api/pricing/", pricing_table, name="pricing-table"),
     path("api/payments/log/", log_payment, name="log-payment"),
     path("api/payments/webhook/singpay/", singpay_webhook, name="singpay-webhook"),
     path("api/payments/fedapay/initiate/", fedapay_initiate, name="fedapay-initiate"),

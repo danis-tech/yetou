@@ -10,12 +10,14 @@ class UsersAppConfig(AppConfig):
         import users_app.signals  # noqa: F401
         from django.contrib import admin
 
-        # Clean up unused admin registrations
+        # Admin épuré : uniquement Médias, Utilisateurs, Catégories, Paiements, Activités.
+        # Tout le reste (allauth, jetons JWT, etc.) est masqué.
         for model in list(admin.site._registry):
             app = model._meta.app_label
             name = model.__name__
-            if app in ("account", "socialaccount", "sites", "authtoken", "auth") and name in (
+            if app in ("account", "socialaccount", "sites", "authtoken", "auth", "token_blacklist") and name in (
                 "EmailAddress", "SocialApp", "SocialAccount", "SocialToken", "Site", "TokenProxy", "Group",
+                "OutstandingToken", "BlacklistedToken",
             ):
                 try:
                     admin.site.unregister(model)

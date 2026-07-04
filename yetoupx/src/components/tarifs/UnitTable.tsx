@@ -1,9 +1,18 @@
+"use client";
+
+import { usePricing, formatFcfa } from "@/hooks/usePricing";
+
+const USD_RATE = 600;
+const formatUsd = (fcfa: number) => `~$${(fcfa / USD_RATE).toFixed(2)}`;
+
 export default function UnitTable() {
+  const { pricing } = usePricing();
+
   return (
     <div className="unit-table">
       <div className="unit-table-header">
         <h3>Grille tarifaire complète</h3>
-        <p>Prix indicatifs en FCFA et USD (taux de référence BEAC : 1 USD = 600 FCFA)</p>
+        <p>Prix indicatifs en FCFA et USD (taux de référence BEAC : 1 USD = {USD_RATE} FCFA)</p>
       </div>
       <div className="unit-row head">
         <span className="unit-type">Type de contenu</span>
@@ -11,54 +20,34 @@ export default function UnitTable() {
         <span className="unit-usd">Prix USD</span>
         <span className="unit-target">Cible</span>
       </div>
-      <div className="unit-row">
-        <div className="unit-type">
-          <i className="ti ti-photo"></i>
-          <div>
-            <div className="unit-type-name">Photo HD 1080p</div>
-            <div className="unit-type-desc">6 000 × 4 000 px · JPEG</div>
+      {pricing.pricing.photo.map((row) => (
+        <div className="unit-row" key={`photo-${row.quality}`}>
+          <div className="unit-type">
+            <i className="ti ti-photo"></i>
+            <div>
+              <div className="unit-type-name">Photo {row.quality_display}</div>
+              <div className="unit-type-desc">{row.description || "Licence commerciale incluse"}</div>
+            </div>
           </div>
+          <div className="unit-fcfa">{formatFcfa(row.price)}</div>
+          <div className="unit-usd">{formatUsd(row.price)}</div>
+          <div className="unit-target">{row.quality === "4K" ? "Professionnels" : "Particuliers"}</div>
         </div>
-        <div className="unit-fcfa">1 500 FCFA</div>
-        <div className="unit-usd">~$2.50</div>
-        <div className="unit-target">Particuliers</div>
-      </div>
-      <div className="unit-row">
-        <div className="unit-type">
-          <i className="ti ti-photo"></i>
-          <div>
-            <div className="unit-type-name">Photo 4K</div>
-            <div className="unit-type-desc">8 000 × 5 333 px · RAW + JPEG</div>
+      ))}
+      {pricing.pricing.video.map((row) => (
+        <div className="unit-row" key={`video-${row.quality}`}>
+          <div className="unit-type">
+            <i className="ti ti-video"></i>
+            <div>
+              <div className="unit-type-name">Vidéo drone — {row.quality_display}</div>
+              <div className="unit-type-desc">{row.description || "MP4 · H.264"}</div>
+            </div>
           </div>
+          <div className="unit-fcfa">{formatFcfa(row.price)}</div>
+          <div className="unit-usd">{formatUsd(row.price)}</div>
+          <div className="unit-target">{row.quality === "4K" ? "Entreprises" : "Agences / Médias"}</div>
         </div>
-        <div className="unit-fcfa">3 000 FCFA</div>
-        <div className="unit-usd">~$5.00</div>
-        <div className="unit-target">Professionnels</div>
-      </div>
-      <div className="unit-row">
-        <div className="unit-type">
-          <i className="ti ti-video"></i>
-          <div>
-            <div className="unit-type-name">Vidéo drone — 30 secondes</div>
-            <div className="unit-type-desc">4K UHD · MP4 · H.264</div>
-          </div>
-        </div>
-        <div className="unit-fcfa">5 000 FCFA</div>
-        <div className="unit-usd">~$8.50</div>
-        <div className="unit-target">Agences / Médias</div>
-      </div>
-      <div className="unit-row">
-        <div className="unit-type">
-          <i className="ti ti-video"></i>
-          <div>
-            <div className="unit-type-name">Vidéo drone — 1 minute</div>
-            <div className="unit-type-desc">4K UHD · MP4 · H.264</div>
-          </div>
-        </div>
-        <div className="unit-fcfa">10 000 FCFA</div>
-        <div className="unit-usd">~$17.00</div>
-        <div className="unit-target">Entreprises</div>
-      </div>
+      ))}
       <div className="unit-row highlight">
         <div className="unit-type">
           <i className="ti ti-star" style={{ color: "#C8371A" }}></i>

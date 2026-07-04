@@ -3,23 +3,36 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Photo } from "@/types";
+import LikeButton from "@/components/ui/LikeButton";
 
 interface PhotoCardProps {
   photo: Photo;
   idx: number;
   onBuy: (name: string, price: string, format: string, img: string, mediaId?: number) => void;
   onContextCapture: () => void;
+  onToggleLike: (mediaId: number, onUpdate: (likes: number, isLiked: boolean) => void) => void;
+  likeLoading?: boolean;
+  carousel?: boolean;
 }
 
-export default function PhotoCard({ photo, idx, onBuy, onContextCapture }: PhotoCardProps) {
+export default function PhotoCard({ photo, idx, onBuy, onContextCapture, onToggleLike, likeLoading, carousel }: PhotoCardProps) {
   const router = useRouter();
   const imgSrc = photo.img?.trim() || "";
   const [imgLoaded, setImgLoaded] = useState(!imgSrc);
+  const [likes, setLikes] = useState(photo.likes);
+  const [isLiked, setIsLiked] = useState(photo.isLiked);
+
+  const handleLike = () => {
+    onToggleLike(photo.id, (newLikes, newIsLiked) => {
+      setLikes(newLikes);
+      setIsLiked(newIsLiked);
+    });
+  };
 
   return (
     <div
-      className="photo-item"
-      style={{ animationDelay: `${idx * 0.04}s` }}
+      className={`photo-item${carousel ? " photo-item--carousel" : ""}`}
+      style={carousel ? undefined : { animationDelay: `${idx * 0.04}s` }}
       onClick={() => router.push(`/photo/${photo.id}`)}
       onContextMenu={(e) => { e.preventDefault(); onContextCapture(); }}
     >
@@ -50,8 +63,12 @@ export default function PhotoCard({ photo, idx, onBuy, onContextCapture }: Photo
         <div className="photo-info-title">{photo.title}</div>
         <div className="photo-info-sub">
           {photo.details.split("·").slice(1).join("·").trim()}
-          <span style={{ marginLeft: "12px", color: "rgba(255,255,255,0.5)", fontSize: "10px" }}>
-            <i className="ti ti-download" style={{ fontSize: "10px" }}></i> {photo.downloads}
+          <span className="photo-stats">
+            <LikeButton likes={likes} isLiked={isLiked} loading={likeLoading} onToggle={handleLike} />
+            <span className="photo-stat">
+              <i className="ti ti-download" />
+              {photo.downloads}
+            </span>
           </span>
         </div>
         <div className="photo-action">

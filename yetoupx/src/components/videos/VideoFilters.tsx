@@ -1,20 +1,27 @@
 "use client";
 
+import type { MediaSortKey } from "@/hooks/useMediaFilter";
+import { usePricing, formatFcfa } from "@/hooks/usePricing";
+
 interface VideoFiltersProps {
   activeVCat: string;
   activeVDur: string;
+  activeVRes: string;
   vSort: string;
   onSetVCat: (cat: string) => void;
   onSetVDur: (dur: string) => void;
-  onSetVSort: (sort: string) => void;
+  onSetVRes: (res: string) => void;
+  onSetVSort: (sort: MediaSortKey) => void;
 }
 
 export default function VideoFilters({
   activeVCat,
   activeVDur,
+  activeVRes,
   vSort,
   onSetVCat,
   onSetVDur,
+  onSetVRes,
   onSetVSort,
 }: VideoFiltersProps) {
   const cats = ["all", "paysages", "nature", "events", "archi", "culture"];
@@ -27,9 +34,16 @@ export default function VideoFilters({
   const durs = ["all", "30", "60"];
   const durLabels: Record<string, string> = {
     all: "Toutes",
-    "30": "30 sec — 5 000 FCFA",
-    "60": "1 min — 10 000 FCFA",
+    "30": "30 sec",
+    "60": "1 min",
   };
+
+  const { pricing } = usePricing();
+  const reses = ["all", ...pricing.pricing.video.map((r) => r.quality)];
+  const resLabels: Record<string, string> = { all: "Toutes" };
+  pricing.pricing.video.forEach((r) => {
+    resLabels[r.quality] = `${r.quality_display} — ${formatFcfa(r.price)}`;
+  });
 
   return (
     <div className="filter-bar">
@@ -47,6 +61,19 @@ export default function VideoFilters({
       </div>
       <div className="filter-sep"></div>
       <div className="filter-group">
+        <span className="filter-label">Qualité :</span>
+        {reses.map((res) => (
+          <button
+            key={res}
+            className={`chip ${activeVRes === res ? "active" : ""}`}
+            onClick={() => onSetVRes(res)}
+          >
+            {resLabels[res]}
+          </button>
+        ))}
+      </div>
+      <div className="filter-sep"></div>
+      <div className="filter-group">
         <span className="filter-label">Durée :</span>
         {durs.map((dur) => (
           <button
@@ -58,8 +85,9 @@ export default function VideoFilters({
           </button>
         ))}
       </div>
-      <select className="sort-select" value={vSort} onChange={(e) => onSetVSort(e.target.value)}>
+      <select className="sort-select" value={vSort} onChange={(e) => onSetVSort(e.target.value as MediaSortKey)}>
         <option value="recent">Plus récents</option>
+        <option value="popular">Plus aimés</option>
         <option value="price-asc">Prix croissant</option>
         <option value="price-desc">Prix décroissant</option>
       </select>

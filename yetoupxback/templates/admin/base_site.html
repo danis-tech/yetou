@@ -8,75 +8,135 @@
 
 {% block extrahead %}
 {{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const table = document.querySelector('#result_list');
-    if (table) {
+    if (table && typeof DataTable !== 'undefined') {
       table.classList.add('display');
       new DataTable(table, {
-        paging: true,
+        paging: false,
         searching: true,
         ordering: true,
-        info: true,
-        lengthMenu: [10, 25, 50, 100],
+        info: false,
         language: {
           url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/fr-FR.json'
         },
-        initComplete: function() {
-          // Move search bar up
-          const filter = document.querySelector('.dtrg-search');
-          if (filter) {
-            const toolbar = document.querySelector('#changelist-search');
-            if (toolbar) toolbar.appendChild(filter.parentElement);
-          }
-        }
       });
     }
   });
 </script>
+<script>
+  /* Aperçu média (photo/vidéo) en modal, sans quitter l'interface admin */
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.createElement('div');
+    modal.className = 'yetou-media-modal';
+    modal.hidden = true;
+    modal.innerHTML =
+      '<div class="yetou-media-modal-backdrop"></div>' +
+      '<div class="yetou-media-modal-dialog">' +
+        '<button type="button" class="yetou-media-modal-close" aria-label="Fermer">&times;</button>' +
+        '<div class="yetou-media-modal-title"></div>' +
+        '<div class="yetou-media-modal-body"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    const bodyEl = modal.querySelector('.yetou-media-modal-body');
+    const titleEl = modal.querySelector('.yetou-media-modal-title');
+
+    function closeModal() {
+      modal.hidden = true;
+      bodyEl.innerHTML = '';
+      document.body.classList.remove('yetou-modal-open');
+    }
+
+    function openModal(type, src, poster, title) {
+      if (!src) return;
+      bodyEl.innerHTML = '';
+      titleEl.textContent = title || '';
+      let el;
+      if (type === 'video') {
+        el = document.createElement('video');
+        el.src = src;
+        if (poster) el.poster = poster;
+        el.controls = true;
+        el.autoplay = true;
+        el.preload = 'metadata';
+      } else {
+        el = document.createElement('img');
+        el.src = src;
+        el.alt = title || '';
+      }
+      bodyEl.appendChild(el);
+      modal.hidden = false;
+      document.body.classList.add('yetou-modal-open');
+    }
+
+    document.addEventListener('click', function(e) {
+      const trigger = e.target.closest('.yetou-media-preview');
+      if (trigger) {
+        e.preventDefault();
+        openModal(trigger.dataset.type, trigger.dataset.src, trigger.dataset.poster, trigger.dataset.title);
+        return;
+      }
+      if (!modal.hidden && (e.target.closest('.yetou-media-modal-close') || e.target.classList.contains('yetou-media-modal-backdrop'))) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
+  });
+</script>
 <style>
-  :root {
-    --primary: #C8371A;
-    --primary-dark: #A52D16;
-    --body-bg: #0A0A0F;
-    --body-fg: #F0EFEA;
-    --body-quiet-color: #8A8A95;
-    --darkened-bg: #14141A;
-    --selected-bg: rgba(200,55,26,0.15);
-    --selected-row: rgba(200,55,26,0.08);
-    --link-fg: #C8371A;
-    --link-hover-color: #e04528;
-    --link-selected-fg: #e04528;
-    --breadcrumbs-bg: #14141A;
-    --breadcrumbs-fg: #C8371A;
-    --header-bg: #050508;
-    --header-color: #F0EFEA;
-    --button-bg: #C8371A;
-    --button-hover-bg: #A52D16;
-    --button-fg: #fff;
-    --default-button-bg: #C8371A;
-    --default-button-hover-bg: #A52D16;
-    --close-button-bg: #2A2A35;
-    --close-button-hover-bg: #3A3A45;
-    --delete-button-bg: #C8371A;
-    --delete-button-hover-bg: #A52D16;
-    --object-tools-bg: #14141A;
-    --object-tools-hover-bg: #1A1A25;
-    --border-color: #2A2A35;
-    --hairline-color: #2A2A35;
-    --input-bg: #0A0A0F;
-    --input-fg: #F0EFEA;
-    --input-border: #2A2A35;
-    --message-success-bg: rgba(34,197,94,0.1);
-    --message-warning-bg: rgba(255,179,0,0.1);
-    --message-error-bg: rgba(200,55,26,0.1);
-    --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-family-monospace: 'Fira Code', 'Consolas', monospace;
-    --header-height: 50px;
-    --header-logo-color: #F0EFEA;
+  /* !important sur chaque variable : empêche le sélecteur de thème natif de Django
+     (html[data-theme="light"], plus spécifique que :root) de reprendre la main
+     avec des couleurs claires si le thème OS/utilisateur est en mode clair. */
+  :root, html[data-theme="light"], html[data-theme="dark"], html[data-theme="auto"] {
+    --primary: #C8371A !important;
+    --primary-dark: #A52D16 !important;
+    --body-bg: #0A0A0F !important;
+    --body-fg: #F0EFEA !important;
+    --body-quiet-color: #8A8A95 !important;
+    --darkened-bg: #14141A !important;
+    --selected-bg: rgba(200,55,26,0.15) !important;
+    --selected-row: rgba(200,55,26,0.08) !important;
+    --link-fg: #C8371A !important;
+    --link-hover-color: #e04528 !important;
+    --link-selected-fg: #e04528 !important;
+    --breadcrumbs-bg: #14141A !important;
+    --breadcrumbs-fg: #C8371A !important;
+    --header-bg: #050508 !important;
+    --header-color: #F0EFEA !important;
+    --button-bg: #C8371A !important;
+    --button-hover-bg: #A52D16 !important;
+    --button-fg: #fff !important;
+    --default-button-bg: #C8371A !important;
+    --default-button-hover-bg: #A52D16 !important;
+    --close-button-bg: #2A2A35 !important;
+    --close-button-hover-bg: #3A3A45 !important;
+    --delete-button-bg: #C8371A !important;
+    --delete-button-hover-bg: #A52D16 !important;
+    --object-tools-bg: #14141A !important;
+    --object-tools-hover-bg: #1A1A25 !important;
+    --border-color: #2A2A35 !important;
+    --hairline-color: #2A2A35 !important;
+    --input-bg: #0A0A0F !important;
+    --input-fg: #F0EFEA !important;
+    --input-border: #2A2A35 !important;
+    --message-success-bg: rgba(34,197,94,0.1) !important;
+    --message-warning-bg: rgba(255,179,0,0.1) !important;
+    --message-error-bg: rgba(200,55,26,0.1) !important;
+    --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    --font-family-monospace: 'Fira Code', 'Consolas', monospace !important;
+    --header-height: 50px !important;
+    --header-logo-color: #F0EFEA !important;
   }
 
   body { font-family: var(--font-family-primary); font-size: 13px; }
@@ -178,19 +238,153 @@
   .warning { background: var(--message-warning-bg); border: 1px solid rgba(255,179,0,0.2); border-radius: 8px; }
   .errornote { background: var(--message-error-bg); border: 1px solid rgba(200,55,26,0.2); border-radius: 8px; }
 
-  /* Login page */
+  /* ─── Page de connexion ─── */
   .login #header { display: none; }
-  .login #container {
-    background: var(--darkened-bg); border: 1px solid var(--border-color);
-    border-radius: 16px; padding: 40px; max-width: 400px; margin: 100px auto;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  .login #footer { display: none; }
+
+  body.login {
+    background:
+      radial-gradient(600px circle at 15% 20%, rgba(200,55,26,0.14), transparent 60%),
+      radial-gradient(700px circle at 85% 85%, rgba(200,55,26,0.10), transparent 60%),
+      #0A0A0F !important;
   }
-  .login .form-row { margin-bottom: 14px; }
-  .login .form-row label { font-size: 12px; font-weight: 500; }
-  .login #content { padding: 0; }
-  .login #content h1 { text-align: center; margin-bottom: 24px; }
-  .login .submit-row { display: flex; justify-content: center; }
-  .login .submit-row input { width: 100%; padding: 10px; font-size: 13px; }
+
+  /* Neutralise tout fond/bordure hérité du thème clair/sombre natif de Django
+     sur les conteneurs intermédiaires (seule la carte #content-main doit être visible). */
+  .login #container,
+  .login .main,
+  .login main.content,
+  .login #content {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .login #container { min-width: 0; }
+
+  /* #container > .main est étiré en hauteur par Django (base.css) : on centre
+     le contenu à l'intérieur de ce bloc plutôt que sur #container lui-même. */
+  .login .main,
+  .login main.content {
+    width: 100%;
+  }
+  .login main.content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    /* Padding bas > padding haut : décale le centrage un peu vers le haut */
+    padding: 6vh 20px 16vh;
+    box-sizing: border-box;
+  }
+
+  .login #content-related { display: none; }
+
+  .login #content {
+    padding: 0;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  /* En-tête de marque au-dessus de la carte */
+  .login-brand { text-align: center; margin-bottom: 28px; }
+  .login-brand-title {
+    font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800;
+    letter-spacing: -0.5px; color: #F0EFEA; margin: 0 0 6px;
+  }
+  .login-brand-title em { color: var(--primary); font-style: normal; }
+  .login-brand-subtitle {
+    font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--body-quiet-color); margin: 0;
+  }
+
+  .login #content-main {
+    position: relative;
+    float: none;
+    box-sizing: border-box;
+    width: 100%;
+    background: linear-gradient(180deg, #16161D 0%, #101015 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 38px 34px 32px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    overflow: hidden;
+  }
+  .login #content-main::before {
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--primary), #e0663f, var(--primary));
+  }
+
+  .login #content-title { display: none; }
+
+  .login form#login-form { display: flex; flex-direction: column; gap: 16px; }
+
+  .login .form-row {
+    border-bottom: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .login .form-row label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--body-quiet-color);
+  }
+  .login .form-row input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 14px;
+    font-size: 13px;
+    background: #0A0A0F;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .login .form-row input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(200,55,26,0.15);
+    outline: none;
+  }
+
+  .login .password-reset-link { margin-top: -4px; text-align: right; }
+  .login .password-reset-link a { font-size: 11px; color: var(--body-quiet-color); }
+  .login .password-reset-link a:hover { color: var(--primary); }
+
+  .login .errornote {
+    margin-bottom: 18px; padding: 12px 14px; font-size: 12px; line-height: 1.5;
+  }
+
+  .login .submit-row {
+    display: block;
+    margin: 6px 0 0;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+  }
+  .login .submit-row input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--primary), #A52D16);
+    box-shadow: 0 8px 20px rgba(200,55,26,0.3);
+    transition: transform .15s, box-shadow .15s, background .15s;
+  }
+  .login .submit-row input[type="submit"]:hover {
+    background: linear-gradient(135deg, #e04528, var(--primary));
+    box-shadow: 0 10px 24px rgba(200,55,26,0.4);
+    transform: translateY(-1px);
+  }
+  .login .submit-row input[type="submit"]:active { transform: translateY(0); }
 
   /* Sidebar */
   #content-related {
@@ -202,6 +396,20 @@
 
   /* Hide sidebar on main index */
   .dashboard #content-related { display: none; }
+  .dashboard #content-main { margin-right: 0 !important; width: 100% !important; float: none !important; }
+  /* Django limite le tableau de bord à 600px de large par défaut : on l'étend */
+  .dashboard #content { width: 100% !important; max-width: none !important; }
+
+  /* Liste des applications (Médias, Utilisateurs, ...) : colonne de navigation
+     verticale unique, alignée dans la colonne gauche du tableau de bord */
+  .dashboard #content-main.app-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .dashboard #content-main.app-list .module table {
+    width: 100%;
+  }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
@@ -210,7 +418,6 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
   /* Remove unnecessary elements */
-  .object-tools { margin-top: -30px; }
   #footer { display: none; }
   div.help, p.help, span.help { font-size: 11px; color: var(--body-quiet-color); }
 
@@ -258,11 +465,184 @@
   }
   table.display thead th:hover { background: var(--selected-bg) !important; }
 
-  /* Hide admin filter sidebar */
-  #changelist-filter, .module.filtered { display: none !important; }
-  .change-list .filtered { background: none !important; }
-  .change-list .filtered .results, .change-list .filtered .paginator, .change-list .filtered #toolbar { margin-right: 0 !important; }
-  .change-list .filtered table { border-right: none !important; }
+  /* Filtres latéraux */
+  #changelist-filter {
+    background: var(--darkened-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+  }
+  #changelist-filter h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--body-quiet-color);
+    margin-bottom: 8px;
+  }
+  #changelist-filter li { margin-bottom: 4px; }
+  #changelist-filter a { color: var(--body-quiet-color); font-size: 12px; }
+  #changelist-filter li.selected a { color: var(--primary); font-weight: 600; }
+  .change-list .filtered .results,
+  .change-list .filtered .paginator,
+  .change-list .filtered #toolbar { margin-right: 280px; }
+
+  /* ─── Formulaires : agencement des champs (fiche ajout/modification) ─── */
+  fieldset.module { padding: 4px 24px 22px; }
+  fieldset.module > h2,
+  fieldset.module > details > summary > h2 {
+    margin: 0 -24px 18px;
+    padding: 14px 24px;
+  }
+  fieldset.module .description { padding: 12px 0 4px; color: var(--body-quiet-color); font-size: 12px; }
+
+  .form-row { border-bottom: 1px solid var(--border-color); padding: 16px 0; }
+  .form-row:last-child { border-bottom: none; }
+
+  /* Ligne à plusieurs champs : grille régulière au lieu du flex par défaut (qui laisse de grands vides) */
+  .flex-container.form-multiline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px 28px;
+    align-items: start;
+  }
+  .flex-container.form-multiline > .fieldBox {
+    margin-right: 0;
+    min-width: 0;
+  }
+
+  /* Chaque champ : libellé au-dessus, champ en dessous (plus lisible que libellé à gauche) */
+  .form-row .flex-container,
+  .flex-container.form-multiline > .fieldBox {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .form-row .flex-container.checkbox-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .aligned label, .aligned legend {
+    display: block;
+    float: none;
+    width: auto;
+    min-width: 0;
+    padding: 0 0 7px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--body-quiet-color);
+  }
+  .aligned .vCheckboxLabel {
+    text-transform: none; font-size: 13px; font-weight: 500; color: var(--body-fg);
+    padding: 0 0 0 8px;
+  }
+
+  form .aligned ul { margin-left: 0; padding-left: 0; }
+  form .aligned div.radiolist { margin: 0; padding: 0; }
+
+  form .aligned p.help, form .aligned div.help,
+  form .aligned input + p.help, form .aligned textarea + p.help, form .aligned select + p.help,
+  form .aligned input + div.help, form .aligned textarea + div.help, form .aligned select + div.help {
+    margin: 8px 0 0 !important;
+    padding: 0 !important;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .vTextField, .vUUIDField, .vURLField, .vIntegerField, .vBigIntegerField,
+  .vDateField, .vTimeField, select:not([multiple]) {
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+  }
+  .vLargeTextField, .vXMLLargeTextField, textarea {
+    width: 100% !important;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 90px;
+  }
+
+  /* ─── Barre d'actions (boutons Enregistrer / Supprimer) ─── */
+  .submit-row {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    background: var(--darkened-bg); border: 1px solid var(--border-color);
+    border-radius: 10px; padding: 14px 18px; margin: 0 0 24px;
+  }
+  .submit-row input[type="submit"] { margin: 0; }
+  .submit-row input[name="_save"] {
+    order: -1;
+    font-weight: 700;
+    padding: 9px 22px;
+  }
+  .submit-row input[name="_addanother"],
+  .submit-row input[name="_continue"] {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--body-fg);
+  }
+  .submit-row input[name="_addanother"]:hover,
+  .submit-row input[name="_continue"]:hover {
+    border-color: var(--primary); color: var(--primary); background: rgba(200,55,26,0.08);
+  }
+  .submit-row p.deletelink-box,
+  .submit-row .deletelink-box {
+    margin-left: auto; margin-top: 0;
+  }
+
+  .object-tools { margin: 0 0 16px; text-align: right; }
+  .object-tools a { border-radius: 6px; }
+
+  /* ─── Barre latérale : liste des applications ─── */
+  #nav-sidebar { background: var(--body-bg); padding-top: 8px; }
+  #nav-sidebar .module { margin: 0 12px 16px; background: transparent; border: none; }
+  #nav-sidebar caption, #nav-sidebar .module h2 {
+    background: transparent; border: none; color: var(--body-quiet-color);
+    font-size: 10px; letter-spacing: 0.6px; padding: 6px 8px;
+  }
+  #nav-sidebar table { width: 100%; border-collapse: collapse; }
+  #nav-sidebar th, #nav-sidebar td {
+    padding: 6px 8px !important; border: none !important; background: transparent !important;
+  }
+  #nav-sidebar tr:hover th, #nav-sidebar tr:hover td {
+    background: var(--darkened-bg) !important; border-radius: 6px;
+  }
+  #nav-sidebar .addlink { color: var(--primary) !important; font-size: 11px; }
+  #nav-filter {
+    border-radius: 8px; padding: 8px 12px; margin: 12px; width: calc(100% - 24px);
+    box-sizing: border-box;
+  }
+
+  /* ─── Modal aperçu média (photo / vidéo) ─── */
+  body.yetou-modal-open { overflow: hidden; }
+  .yetou-media-modal { position: fixed; inset: 0; z-index: 10000; }
+  .yetou-media-modal[hidden] { display: none; }
+  .yetou-media-modal-backdrop {
+    position: absolute; inset: 0; background: rgba(5,5,8,0.85); backdrop-filter: blur(3px);
+  }
+  .yetou-media-modal-dialog {
+    position: relative; max-width: min(90vw, 900px); max-height: 90vh; margin: 5vh auto;
+    background: var(--darkened-bg); border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 16px; box-shadow: 0 25px 60px rgba(0,0,0,0.55);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .yetou-media-modal-title {
+    align-self: flex-start; color: var(--body-fg); font-family: 'Sora', sans-serif;
+    font-size: 13px; font-weight: 600; padding-right: 30px;
+  }
+  .yetou-media-modal-body { display: flex; align-items: center; justify-content: center; width: 100%; }
+  .yetou-media-modal-body img, .yetou-media-modal-body video {
+    max-width: 100%; max-height: 78vh; border-radius: 8px; display: block; background: #000;
+  }
+  .yetou-media-modal-close {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--close-button-bg); color: var(--body-fg); border: none; cursor: pointer;
+    font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .yetou-media-modal-close:hover { background: var(--primary); color: #fff; }
 </style>
 {% endblock %}
 

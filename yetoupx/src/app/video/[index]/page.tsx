@@ -2,7 +2,7 @@
 
 import { useState, use, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { fetchMediaById, fetchMedia } from "@/services/api";
+import { fetchMediaById, fetchMedia, toggleMediaLike } from "@/services/api";
 import type { ApiMedia } from "@/services/api";
 import { useToast } from "@/hooks/useToast";
 import { usePayment } from "@/hooks/usePayment";
@@ -11,6 +11,7 @@ import Toast from "@/components/ui/Toast";
 import PageLoader from "@/components/ui/PageLoader";
 import AuthModal from "@/components/modals/AuthModal";
 import VideoPlayer from "@/components/ui/VideoPlayer";
+import LikeButton from "@/components/ui/LikeButton";
 import { PAY_METHODS, isCardMethod, logoForPayMethod } from "@/lib/payment-methods";
 import type { AuthTab } from "@/types";
 import googleLogo from "@/logo/google.jpg";
@@ -41,6 +42,16 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
   const [purchased, setPurchased] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<AuthTab>("login");
+  const [likes, setLikes] = useState(0);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  useEffect(() => {
+    if (media) {
+      setLikes(media.likes_count ?? 0);
+      setIsLiked(media.is_liked ?? false);
+    }
+  }, [media]);
 
   const handleBuy = useCallback(async () => {
     if (!media) return;
@@ -62,6 +73,30 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
     });
     if (ok) setPurchased(true);
   }, [media, activePayMethod, checkout, showToast, isLoggedIn]);
+
+  const handleLike = useCallback(async () => {
+    if (!media) return;
+    if (!isLoggedIn) {
+      setAuthTab("login");
+      setAuthOpen(true);
+      return;
+    }
+    setLikeLoading(true);
+    try {
+      const result = await toggleMediaLike(media.id);
+      if (result) {
+        setLikes(result.likes_count);
+        setIsLiked(result.is_liked);
+      } else {
+        showToast("Impossible de mettre à jour le like.", true);
+      }
+    } catch {
+      showToast("Erreur réseau lors du like.", true);
+    } finally {
+      setLikeLoading(false);
+    }
+  }, [media, isLoggedIn, showToast]);
+
   const logoSrc = (m: string) => logoForPayMethod(m, airtelLogo.src, moovLogo.src);
 
   if (loading) return (
@@ -90,7 +125,10 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
           <h1>{d.title}</h1>
           <div className="detail-topbar-sub">{d.quality} · {d.duration}</div>
         </div>
-        <div className="detail-topbar-price">{d.price.toLocaleString("fr-FR")} FCFA</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <LikeButton likes={likes} isLiked={isLiked} loading={likeLoading} size="md" onToggle={handleLike} />
+          <div className="detail-topbar-price">{d.price.toLocaleString("fr-FR")} FCFA</div>
+        </div>
       </div>
 
       <div className="detail-hero">
@@ -98,7 +136,7 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
           {purchased ? (
             <>
               <VideoPlayer key={d.fileUrl} src={d.fileUrl} />
-              <div style={{ position: "absolute", top: "12px", left: "12px", zIndex: 22, background: "rgba(200,55,26,0.95)", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "4px 12px", borderRadius: "6px" }}>4K UHD</div>
+              <div style={{ position: "absolute", top: "12px", left: "12px", zIndex: 22, background: "rgba(200,55,26,0.95)", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "4px 12px", borderRadius: "6px" }}>{display.quality}</div>
             </>
           ) : (
             <VideoPlayer key={d.fileUrl} src={d.fileUrl} preview autoPlay />
@@ -111,7 +149,7 @@ export default function VideoDetailPage({ params }: { params: Promise<{ index: s
           <h1 style={{ fontFamily: "Sora", fontSize: "24px", fontWeight: 700, color: "#F0EFEA", marginBottom: "8px" }}>{d.title}</h1>
           <p style={{ color: "#8A8A95", lineHeight: 1.6, marginBottom: "24px" }}>{d.desc}</p>
           <div className="detail-info-cards">
-            {[{ i: "ti-clock", l: "Durée", v: d.duration }, { i: "ti-video", l: "Qualité", v: d.quality }, { i: "ti-movie", l: "Codec", v: d.codec || "H.264" }, { i: "ti-camera", l: "FPS", v: d.frameRate || "30" }, { i: "ti-drone", l: "Drone", v: d.camera }, { i: "ti-map-pin", l: "Province", v: d.province }, { i: "ti-download", l: "Téléchargements", v: String(d.downloads) }, { i: "ti-shield-check", l: "Licence", v: "Commerciale" }].map((c, i) => (
+            {[{ i: "ti-clock", l: "Durée", v: d.duration }, { i: "ti-video", l: "Qualité", v: d.quality }, { i: "ti-movie", l: "Codec", v: d.codec || "H.264" }, { i: "ti-camera", l: "FPS", v: d.frameRate || "30" }, { i: "ti-drone", l: "Drone", v: d.camera }, { i: "ti-map-pin", l: "Province", v: d.province }, { i: "ti-download", l: "Téléchargements", v: String(d.downloads) }, { i: "ti-heart", l: "Likes", v: String(likes) }, { i: "ti-shield-check", l: "Licence", v: "Commerciale" }].map((c, i) => (
               <div key={i} className="detail-info-card">
                 <div className="detail-info-card-icon"><i className={c.i}></i><span className="detail-info-card-label">{c.l}</span></div>
                 <div className="detail-info-card-value">{c.v}</div>

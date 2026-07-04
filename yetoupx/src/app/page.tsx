@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { fetchMedia, getCachedMedia } from "@/services/api";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Tab, AuthTab, BuyItem } from "@/types";
-import type { Photo, Video } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/useToast";
 import { usePayment } from "@/hooks/usePayment";
 import { usePurchases } from "@/hooks/usePurchases";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { useLongPressGuard } from "@/hooks/useLongPressGuard";
-import { usePhotoFilter, useVideoFilter } from "@/hooks/useMediaFilter";
-import { buildSearchIndex, useMediaSearch } from "@/hooks/useMediaSearch";
+import { usePhotoFilters, useVideoFilters } from "@/hooks/useMediaFilter";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useServerMediaList } from "@/hooks/useServerMediaList";
+import { useMediaLikes } from "@/hooks/useMediaLikes";
+import { mapApiMediaToPhoto, mapApiMediaToVideo } from "@/lib/media-mapper";
 
 import Navbar from "@/components/layout/Navbar";
 import MobileMenu from "@/components/layout/MobileMenu";
@@ -51,54 +52,36 @@ export default function HomePage() {
 
   useLongPressGuard(longPressCaptureToast);
 
-  const [allPhotos, setAllPhotos] = useState<Photo[]>([]);
-  const [allVideos, setAllVideos] = useState<Video[]>([]);
-  const [loading, setLoading] = useState(true);
+  const photos = usePhotoFilters();
+  const videos = useVideoFilters();
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
 
-  const mapPhotos = useCallback((p: Awaited<ReturnType<typeof fetchMedia>>) => p.map((m) => ({
-    id: m.id, title: m.title,
-    details: `${m.quality_display} · ${m.resolution || m.file_size_display || ""} · ${m.category_display || m.category}`,
-    format: m.license_type || "Commerciale", price: `${m.price} FCFA`,
-    img: m.preview_url || m.thumbnail_url || m.stream_url || m.file_url,
-    pcat: m.category, pres: m.quality.toLowerCase(), downloads: m.downloads,
-    searchIndex: buildSearchIndex(
-      m.title, m.category_display, m.category, m.quality, m.quality_display,
-      m.resolution, m.province, m.city, m.tags, m.license_type,
-    ),
-  })), []);
+  const photoQuery = useMemo(() => ({
+    type: "photo" as const,
+    category: photos.activePCat,
+    resolution: photos.activePRes,
+    search: debouncedSearch,
+    sort: photos.pSort,
+  }), [photos.activePCat, photos.activePRes, debouncedSearch, photos.pSort]);
 
-  const mapVideos = useCallback((v: Awaited<ReturnType<typeof fetchMedia>>) => v.map((m) => ({
-    id: m.id, title: m.title, details: `Vidéo ${m.duration || "0:30"} · ${m.quality_display}`,
-    format: "MP4", duration: m.duration || "0:30", price: `${m.price} FCFA`,
-    img: m.preview_url || m.thumbnail_url || "",
-    videoUrl: m.stream_url || m.file_url,
-    vcat: m.category, vdur: m.duration?.includes("1:") ? "60" : "30", downloads: m.downloads,
-    searchIndex: buildSearchIndex(
-      m.title, m.category_display, m.category, m.quality, m.quality_display,
-      m.duration, m.province, m.city, m.tags,
-    ),
-  })), []);
+  const videoQuery = useMemo(() => ({
+    type: "video" as const,
+    category: videos.activeVCat,
+    duration: videos.activeVDur,
+    resolution: videos.activeVRes,
+    search: debouncedSearch,
+    sort: videos.vSort,
+  }), [videos.activeVCat, videos.activeVDur, videos.activeVRes, debouncedSearch, videos.vSort]);
 
-  useEffect(() => {
-    const cachedP = getCachedMedia("photo");
-    const cachedV = getCachedMedia("video");
-    if (cachedP?.length) setAllPhotos(mapPhotos(cachedP));
-    if (cachedV?.length) setAllVideos(mapVideos(cachedV));
-    if (cachedP?.length && cachedV?.length) setLoading(false);
+  const { items: filteredPhotos, count: photoCount, loading: photosLoading, refreshing: photosRefreshing } = useServerMediaList({
+    params: photoQuery,
+    mapItem: mapApiMediaToPhoto,
+  });
 
-    Promise.all([fetchMedia("photo"), fetchMedia("video")]).then(([p, v]) => {
-      setAllPhotos(mapPhotos(p));
-      setAllVideos(mapVideos(v));
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, [mapPhotos, mapVideos]);
-
-  const photos = usePhotoFilter(allPhotos);
-  const videos = useVideoFilter(allVideos);
-
-  const searchedPhotos = useMediaSearch(photos.filtered, searchQuery);
-  const searchedVideos = useMediaSearch(videos.filtered, searchQuery);
-  const filteredPhotos = searchedPhotos;
-  const filteredVideos = searchedVideos;
+  const { items: filteredVideos, count: videoCount, loading: videosLoading, refreshing: videosRefreshing } = useServerMediaList({
+    params: videoQuery,
+    mapItem: mapApiMediaToVideo,
+  });
 
   const [buyItem, setBuyItem] = useState<BuyItem | null>(null);
   const [activePayMethod, setActivePayMethod] = useState("Airtel Money");
@@ -176,6 +159,11 @@ export default function HomePage() {
     setAuthOpen(true);
   };
 
+  const { toggleLike, loadingId: likeLoadingId } = useMediaLikes(
+    () => { setAuthTab("login"); setAuthOpen(true); },
+    (msg) => showToast(msg, true),
+  );
+
   const handleSearchChange = useCallback((q: string) => {
     setSearchQuery(q);
     if (q.trim() && activeTab === "tarifs") {
@@ -223,22 +211,24 @@ export default function HomePage() {
         onSearch={handleHeroSearch}
       />
 
-      <StatsBar photoCount={filteredPhotos.length} videoCount={filteredVideos.length} />
+      <StatsBar photoCount={photoCount} videoCount={videoCount} />
 
       <SectionTabs
         activeTab={activeTab}
         onSwitchTab={switchTab}
-        photoCount={filteredPhotos.length}
-        videoCount={filteredVideos.length}
+        photoCount={photoCount}
+        videoCount={videoCount}
       />
 
       <div className={`panel ${activeTab === "photos" ? "active" : ""}`}>
         <div className="content">
-          {loading ? (
+          {photosLoading && filteredPhotos.length === 0 ? (
             <MediaGridSkeleton type="photo" count={8} />
           ) : (
             <PhotoGrid
               photos={filteredPhotos}
+              resultCount={photoCount}
+              refreshing={photosRefreshing}
               activePCat={photos.activePCat}
               activePRes={photos.activePRes}
               pSort={photos.pSort}
@@ -248,6 +238,8 @@ export default function HomePage() {
               onBuy={(name, price, format, img, id) => openBuy(name, price, format, img, "photo", id)}
               onContextCapture={longPressCaptureToast}
               onGoTarifs={() => switchTab("tarifs")}
+              onToggleLike={toggleLike}
+              likeLoadingId={likeLoadingId}
             />
           )}
         </div>
@@ -255,20 +247,26 @@ export default function HomePage() {
 
       <div className={`panel ${activeTab === "videos" ? "active" : ""}`}>
         <div className="content">
-          {loading ? (
+          {videosLoading && filteredVideos.length === 0 ? (
             <MediaGridSkeleton type="video" count={6} />
           ) : (
             <VideoGrid
               videos={filteredVideos}
+              resultCount={videoCount}
+              refreshing={videosRefreshing}
               activeVCat={videos.activeVCat}
               activeVDur={videos.activeVDur}
+              activeVRes={videos.activeVRes}
               vSort={videos.vSort}
               onSetVCat={(cat) => { videos.setActiveVCat(cat); setSearchQuery(""); }}
               onSetVDur={(dur) => { videos.setActiveVDur(dur); setSearchQuery(""); }}
+              onSetVRes={(res) => { videos.setActiveVRes(res); setSearchQuery(""); }}
               onSetVSort={videos.setVSort}
               onBuy={(name, price, format, img, id) => openBuy(name, price, format, img, "video", id)}
               onContextCapture={longPressCaptureToast}
               onGoTarifs={() => switchTab("tarifs")}
+              onToggleLike={toggleLike}
+              likeLoadingId={likeLoadingId}
             />
           )}
         </div>

@@ -25,6 +25,8 @@ class MediaListSerializer(serializers.ModelSerializer):
     preview_url = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
     stream_url = serializers.SerializerMethodField()
+    likes_count = serializers.IntegerField(read_only=True, default=0)
+    is_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Media
@@ -32,8 +34,17 @@ class MediaListSerializer(serializers.ModelSerializer):
             "id", "title", "type", "type_display", "quality", "quality_display",
             "category", "category_display", "price", "license_type",
             "file_url", "preview_url", "thumbnail_url", "stream_url",
-            "file_size_display", "resolution", "duration", "downloads", "created_at",
+            "file_size_display", "resolution", "duration", "downloads",
+            "likes_count", "is_liked", "created_at",
         ]
+
+    def get_is_liked(self, obj):
+        if hasattr(obj, "_user_liked"):
+            return bool(obj._user_liked)
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.likes.filter(user=request.user).exists()
 
     def get_thumbnail_url(self, obj):
         return _public_file_url(obj.thumbnail)
@@ -62,6 +73,8 @@ class MediaDetailSerializer(serializers.ModelSerializer):
     preview_url = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
     stream_url = serializers.SerializerMethodField()
+    likes_count = serializers.IntegerField(read_only=True, default=0)
+    is_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Media
@@ -76,8 +89,17 @@ class MediaDetailSerializer(serializers.ModelSerializer):
             "camera_model", "lens", "focal_length", "aperture", "iso", "shutter_speed",
             "country", "province", "city", "latitude", "longitude", "altitude",
             "tags", "season", "weather", "capture_date", "capture_time",
-            "downloads", "views", "rating", "created_at", "updated_at",
+            "downloads", "views", "rating", "likes_count", "is_liked",
+            "created_at", "updated_at",
         ]
+
+    def get_is_liked(self, obj):
+        if hasattr(obj, "_user_liked"):
+            return bool(obj._user_liked)
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.likes.filter(user=request.user).exists()
 
     def get_thumbnail_url(self, obj):
         return _public_file_url(obj.thumbnail)

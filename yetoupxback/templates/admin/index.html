@@ -2,6 +2,7 @@
 {% load i18n %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
   <div style="background:linear-gradient(135deg,#14141A,#1a1a25);border:1px solid #2A2A35;border-radius:12px;padding:20px 24px;flex:1;min-width:180px">
@@ -31,43 +32,335 @@
   </div>
 </div>
 
-<!-- Derniers téléchargements -->
-<div style="background:#14141A;border:1px solid #2A2A35;border-radius:12px;padding:20px 24px;margin-bottom:28px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <h2 style="font-family:Sora,sans-serif;font-size:14px;font-weight:700;color:#F0EFEA;margin:0">Derniers téléchargements</h2>
-    <a href="{% url 'admin:media_app_purchase_changelist' %}" style="font-size:11px;color:#C8371A;text-decoration:none">Voir tout →</a>
+<!-- Répartition générale : Navigation (gauche) / Statistiques (droite), séparées par une ligne verticale -->
+<div class="yetou-main-split">
+
+  <!-- ═══ Gauche : Navigation (liste des applications) ═══ -->
+  <div class="yetou-nav-col">
+    <div class="yetou-dash-eyebrow"><i class="ti ti-list-details"></i> Navigation</div>
+    {{ block.super }}
   </div>
-  <div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse">
-      <thead>
-        <tr>
-          <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Client</th>
-          <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Média</th>
-          <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Type</th>
-          <th style="text-align:right;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Prix</th>
-          <th style="text-align:right;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Téléchargements</th>
-          <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in recent_purchases %}
-        <tr style="border-bottom:1px solid #1A1A25">
-          <td style="padding:10px 12px;font-size:12px;color:#F0EFEA">{{ p.user.email|truncatechars:30 }}</td>
-          <td style="padding:10px 12px;font-size:12px;color:#F0EFEA">{{ p.media.title|truncatechars:40 }}</td>
-          <td style="padding:10px 12px">
-            <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:{% if p.media.type == 'video' %}rgba(200,55,26,0.15){% else %}rgba(34,197,94,0.1){% endif %};color:{% if p.media.type == 'video' %}#C8371A{% else %}#22c55e{% endif %}">{{ p.media.get_type_display }}</span>
-          </td>
-          <td style="padding:10px 12px;font-size:13px;font-weight:700;color:#F0EFEA;text-align:right">{{ p.price }} FCFA</td>
-          <td style="padding:10px 12px;font-size:12px;color:#8A8A95;text-align:right">{{ p.download_count }}/{{ p.max_downloads }}</td>
-          <td style="padding:10px 12px;font-size:11px;color:#8A8A95">{{ p.purchased_at|date:"d/m/Y H:i" }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6" style="padding:24px;text-align:center;color:#8A8A95;font-size:13px">Aucun achat pour le moment.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+  <!-- ═══ Droite : Statistiques ═══ -->
+  <div class="yetou-stats-col">
+    <div class="yetou-dash-eyebrow"><i class="ti ti-chart-histogram"></i> Statistiques</div>
+
+    <div class="yetou-stats-row">
+      <div class="yetou-card" style="flex:1.6;min-width:260px">
+        <div class="yetou-card-accent" style="background:#C8371A"></div>
+        <div class="yetou-card-head">
+          <h2><i class="ti ti-trending-up"></i> Évolution du CA</h2>
+          <span class="yetou-card-sub">14 derniers jours</span>
+        </div>
+        <div class="yetou-legend">
+          <span><i style="background:#C8371A"></i>Recette (FCFA)</span>
+          <span><i style="background:#8A8A95"></i>Commandes</span>
+        </div>
+        <div class="yetou-chart-box" style="height:200px"><canvas id="chart-revenue"></canvas></div>
+      </div>
+
+      <div class="yetou-card" style="flex:1;min-width:220px">
+        <div class="yetou-card-accent" style="background:#8A5CF6"></div>
+        <div class="yetou-card-head">
+          <h2><i class="ti ti-chart-donut-3"></i> Ventes par type</h2>
+        </div>
+        <div class="yetou-donut-wrap">
+          <div class="yetou-chart-box yetou-donut-box"><canvas id="chart-type"></canvas>
+            <div class="yetou-donut-center">
+              <strong id="chart-type-total">0</strong>
+              <span>vente(s)</span>
+            </div>
+          </div>
+          <div class="yetou-stat-list">
+            <div class="yetou-stat-row">
+              <span><i style="background:#22c55e"></i>Photos</span>
+              <strong id="chart-type-photo">0</strong>
+            </div>
+            <div class="yetou-stat-row">
+              <span><i style="background:#C8371A"></i>Vidéos</span>
+              <strong id="chart-type-video">0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="yetou-card">
+      <div class="yetou-card-accent" style="background:#22c55e"></div>
+      <div class="yetou-card-head">
+        <h2><i class="ti ti-receipt-2"></i> Derniers achats</h2>
+        <a href="{% url 'admin:media_app_purchase_changelist' %}">Voir tout <i class="ti ti-arrow-right"></i></a>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Client</th>
+              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Média</th>
+              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Type</th>
+              <th style="text-align:right;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Prix</th>
+              <th style="text-align:right;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Téléchargements</th>
+              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in recent_purchases %}
+            <tr style="border-bottom:1px solid #1A1A25">
+              <td style="padding:10px 12px;font-size:12px;color:#F0EFEA">{{ p.user.email|truncatechars:30 }}</td>
+              <td style="padding:10px 12px;font-size:12px;color:#F0EFEA">{{ p.media.title|truncatechars:40 }}</td>
+              <td style="padding:10px 12px">
+                <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:{% if p.media.type == 'video' %}rgba(200,55,26,0.15){% else %}rgba(34,197,94,0.1){% endif %};color:{% if p.media.type == 'video' %}#C8371A{% else %}#22c55e{% endif %}">{{ p.media.get_type_display }}</span>
+              </td>
+              <td style="padding:10px 12px;font-size:13px;font-weight:700;color:#F0EFEA;text-align:right">{{ p.price }} FCFA</td>
+              <td style="padding:10px 12px;font-size:12px;color:#8A8A95;text-align:right">{{ p.download_count }}/{{ p.max_downloads }}</td>
+              <td style="padding:10px 12px;font-size:11px;color:#8A8A95">{{ p.purchased_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="padding:24px;text-align:center;color:#8A8A95;font-size:13px">Aucun achat pour le moment.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="yetou-card yetou-card-grow">
+      <div class="yetou-card-accent" style="background:#f59e0b"></div>
+      <div class="yetou-card-head">
+        <h2><i class="ti ti-tag"></i> Meilleures catégories</h2>
+        <span class="yetou-card-sub">Par nombre de ventes</span>
+      </div>
+      <div class="yetou-chart-box" style="flex:1;min-height:200px"><canvas id="chart-category"></canvas></div>
+    </div>
   </div>
 </div>
 
-{{ block.super }}
+<style>
+  .yetou-main-split { display: flex; align-items: stretch; gap: 0; margin-bottom: 28px; }
+  .yetou-nav-col {
+    flex: 1; min-width: 0; padding-right: 28px; margin-right: 28px; border-right: 1px solid #2A2A35;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .yetou-stats-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  .yetou-stats-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; }
+  @media (max-width: 900px) {
+    .yetou-main-split { flex-direction: column; }
+    .yetou-nav-col { border-right: none; border-bottom: 1px solid #2A2A35; padding-right: 0; margin-right: 0; padding-bottom: 20px; }
+  }
+
+  .yetou-dash-eyebrow {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; color: #8A8A95;
+    padding-bottom: 8px; border-bottom: 1px solid #2A2A35;
+  }
+  .yetou-dash-eyebrow i { color: #C8371A; font-size: 13px; }
+
+  .yetou-card {
+    position: relative; overflow: hidden;
+    background: #14141A; border: 1px solid #2A2A35; border-radius: 12px; padding: 20px 24px 22px;
+    display: flex; flex-direction: column;
+  }
+  .yetou-card-grow { flex: 1; }
+  .yetou-card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; opacity: 0.85; }
+  .yetou-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .yetou-card-head h2 {
+    display: flex; align-items: center; gap: 8px; margin: 0;
+    font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: #F0EFEA;
+  }
+  .yetou-card-head h2 i { color: #C8371A; font-size: 15px; }
+  .yetou-card-head a { font-size: 11px; color: #C8371A; text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .yetou-card-head a:hover { color: #e04528; }
+  .yetou-card-sub { font-size: 11px; color: #8A8A95; }
+
+  .yetou-legend { display: flex; gap: 14px; font-size: 10px; color: #8A8A95; margin-bottom: 10px; }
+  .yetou-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+  .yetou-chart-box { position: relative; width: 100%; }
+
+  .yetou-donut-wrap { display: flex; align-items: center; gap: 20px; flex: 1; }
+  .yetou-donut-box { flex: 0 0 150px; height: 150px; }
+  .yetou-donut-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .yetou-donut-center strong { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #F0EFEA; line-height: 1.1; }
+  .yetou-donut-center span { font-size: 10px; color: #8A8A95; }
+  .yetou-stat-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .yetou-stat-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #1A1A22; border: 1px solid #2A2A35; border-radius: 8px; padding: 10px 12px;
+  }
+  .yetou-stat-row span { display: flex; align-items: center; font-size: 12px; color: #F0EFEA; }
+  .yetou-stat-row span i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+  .yetou-stat-row strong { font-family: 'Sora', sans-serif; font-size: 15px; color: #F0EFEA; }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart === 'undefined') return;
+
+    Chart.defaults.color = '#8A8A95';
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.size = 11;
+
+    const gridColor = 'rgba(42,42,53,0.6)';
+    const primary = '#C8371A';
+    const primarySoft = 'rgba(200,55,26,0.15)';
+    const muted = '#8A8A95';
+    const green = '#22c55e';
+
+    const revenueLabels = {{ chart_revenue_labels|default:"[]"|safe }};
+    const revenueData = {{ chart_revenue_data|default:"[]"|safe }};
+    const ordersData = {{ chart_orders_data|default:"[]"|safe }};
+
+    const revenueCanvas = document.getElementById('chart-revenue');
+    if (revenueCanvas) {
+      const ctx = revenueCanvas.getContext('2d');
+      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+      gradient.addColorStop(0, 'rgba(200,55,26,0.35)');
+      gradient.addColorStop(1, 'rgba(200,55,26,0)');
+
+      new Chart(revenueCanvas, {
+        type: 'line',
+        data: {
+          labels: revenueLabels,
+          datasets: [
+            {
+              label: 'Recette (FCFA)',
+              data: revenueData,
+              borderColor: primary,
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.35,
+              pointRadius: 3,
+              pointBackgroundColor: primary,
+              pointBorderColor: '#0A0A0F',
+              pointBorderWidth: 1.5,
+              yAxisID: 'y',
+            },
+            {
+              label: 'Commandes',
+              data: ordersData,
+              borderColor: muted,
+              backgroundColor: 'transparent',
+              borderDash: [4, 4],
+              tension: 0.35,
+              pointRadius: 2,
+              pointBackgroundColor: muted,
+              yAxisID: 'y1',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1A1A22',
+              borderColor: '#2A2A35',
+              borderWidth: 1,
+              padding: 10,
+              titleFont: { weight: '700' },
+              callbacks: {
+                label: function(item) {
+                  if (item.dataset.yAxisID === 'y1') return ' ' + item.formattedValue + ' commande(s)';
+                  return ' ' + item.formattedValue + ' FCFA';
+                },
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxRotation: 0 } },
+            y: {
+              position: 'left', grid: { color: gridColor }, border: { display: false },
+              ticks: { callback: (v) => v >= 1000 ? (v / 1000) + 'k' : v },
+            },
+            y1: {
+              position: 'right', grid: { display: false }, border: { display: false },
+              ticks: { precision: 0 }, beginAtZero: true,
+            },
+          },
+        },
+      });
+    }
+
+    const typeCanvas = document.getElementById('chart-type');
+    if (typeCanvas) {
+      const typeData = {{ chart_type_data|default:"[0,0]"|safe }};
+      const hasData = typeData.some((v) => v > 0);
+      const total = typeData.reduce((a, b) => a + b, 0);
+
+      const totalEl = document.getElementById('chart-type-total');
+      const photoEl = document.getElementById('chart-type-photo');
+      const videoEl = document.getElementById('chart-type-video');
+      if (totalEl) totalEl.textContent = total;
+      if (photoEl) photoEl.textContent = typeData[0] || 0;
+      if (videoEl) videoEl.textContent = typeData[1] || 0;
+
+      new Chart(typeCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Photos', 'Vidéos'],
+          datasets: [{
+            data: hasData ? typeData : [1, 1],
+            backgroundColor: hasData ? [green, primary] : ['#2A2A35', '#1A1A22'],
+            borderColor: '#14141A',
+            borderWidth: 3,
+            hoverOffset: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '72%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: hasData,
+              backgroundColor: '#1A1A22', borderColor: '#2A2A35', borderWidth: 1, padding: 10,
+            },
+          },
+        },
+      });
+    }
+
+    const categoryCanvas = document.getElementById('chart-category');
+    if (categoryCanvas) {
+      const categoryLabels = {{ chart_category_labels|default:"[]"|safe }};
+      const categoryData = {{ chart_category_data|default:"[]"|safe }};
+      new Chart(categoryCanvas, {
+        type: 'bar',
+        data: {
+          labels: categoryLabels.length ? categoryLabels : ['Aucune vente'],
+          datasets: [{
+            data: categoryLabels.length ? categoryData : [0],
+            backgroundColor: primarySoft,
+            borderColor: primary,
+            borderWidth: 1.5,
+            borderRadius: 6,
+            maxBarThickness: 28,
+          }],
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1A1A22', borderColor: '#2A2A35', borderWidth: 1, padding: 10,
+              callbacks: { label: (item) => ' ' + item.formattedValue + ' vente(s)' },
+            },
+          },
+          scales: {
+            x: { grid: { color: gridColor }, border: { display: false }, ticks: { precision: 0 } },
+            y: { grid: { display: false }, border: { display: false } },
+          },
+        },
+      });
+    }
+  });
+</script>
 {% endblock %}

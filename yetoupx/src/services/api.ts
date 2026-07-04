@@ -1,31 +1,41 @@
 import { getApiUrl } from "@/lib/api-url";
 
-const MEDIA_CACHE_TTL_MS = 5 * 60 * 1000;
-const MEDIA_CACHE_PREFIX = "yetou_media_";
-
-function readMediaCache(key: string): ApiMedia[] | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = sessionStorage.getItem(`${MEDIA_CACHE_PREFIX}${key}`);
-    if (!raw) return null;
-    const { ts, data } = JSON.parse(raw) as { ts: number; data: ApiMedia[] };
-    if (Date.now() - ts > MEDIA_CACHE_TTL_MS) {
-      sessionStorage.removeItem(`${MEDIA_CACHE_PREFIX}${key}`);
-      return null;
-    }
-    return data;
-  } catch {
-    return null;
-  }
+export interface MediaListParams {
+  type: "photo" | "video";
+  category?: string;
+  resolution?: string;
+  duration?: string;
+  search?: string;
+  sort?: string;
+  pageSize?: number;
 }
 
-function writeMediaCache(key: string, data: ApiMedia[]) {
-  if (typeof window === "undefined") return;
-  try {
-    sessionStorage.setItem(`${MEDIA_CACHE_PREFIX}${key}`, JSON.stringify({ ts: Date.now(), data }));
-  } catch {
-    /* quota dépassé — ignorer */
-  }
+const DEFAULT_PAGE_SIZE = 48;
+const UNFILTERED_PAGE_SIZE = 100;
+const CACHE_TTL_MS = 8_000;
+const listCache = new Map<string, { ts: number; data: { items: ApiMedia[]; count: number } }>();
+const inflight = new Map<string, Promise<{ items: ApiMedia[]; count: number }>>();
+
+/** Vrai si recherche ou filtre catégorie / résolution / durée actifs (le tri seul ne restreint pas). */
+export function hasMediaListFilters(params: MediaListParams): boolean {
+  return !!(
+    (params.category && params.category !== "all") ||
+    (params.resolution && params.resolution !== "all") ||
+    (params.duration && params.duration !== "all") ||
+    params.search?.trim()
+  );
+}
+
+export function buildMediaListQuery(params: MediaListParams): string {
+  const p = new URLSearchParams();
+  p.set("type", params.type);
+  p.set("page_size", String(params.pageSize ?? DEFAULT_PAGE_SIZE));
+  if (params.category && params.category !== "all") p.set("category", params.category);
+  if (params.resolution && params.resolution !== "all") p.set("resolution", params.resolution);
+  if (params.duration && params.duration !== "all") p.set("duration", params.duration);
+  if (params.search?.trim()) p.set("search", params.search.trim());
+  if (params.sort) p.set("sort", params.sort);
+  return p.toString();
 }
 
 export interface ApiMedia {
@@ -70,6 +80,8 @@ export interface ApiMedia {
   capture_date: string | null;
   capture_time: string | null;
   downloads: number;
+  likes_count: number;
+  is_liked: boolean;
   views: number;
   created_at: string;
 }
@@ -84,6 +96,49 @@ export interface ApiPurchase {
   payment_method?: string;
   payment_reference?: string;
   payment_status?: string;
+}
+
+export interface ApiQuality {
+  slug: string;
+  name: string;
+}
+
+export interface ApiPricingRow {
+  quality: string;
+  quality_display: string;
+  price: number;
+  description: string;
+}
+
+export interface ApiPricingTable {
+  qualities: ApiQuality[];
+  pricing: { photo: ApiPricingRow[]; video: ApiPricingRow[] };
+}
+
+let pricingCache: { ts: number; data: ApiPricingTable } | null = null;
+let pricingInflight: Promise<ApiPricingTable> | null = null;
+const PRICING_CACHE_TTL_MS = 60_000;
+
+/** Grille tarifaire dynamique (qualités + prix par type/qualité), avec cache court. */
+export async function fetchPricing(): Promise<ApiPricingTable> {
+  if (pricingCache && Date.now() - pricingCache.ts < PRICING_CACHE_TTL_MS) {
+    return pricingCache.data;
+  }
+  if (pricingInflight) return pricingInflight;
+
+  pricingInflight = (async () => {
+    try {
+      const res = await fetch(`${getApiUrl()}/pricing/`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: ApiPricingTable = await res.json();
+      pricingCache = { ts: Date.now(), data };
+      return data;
+    } finally {
+      pricingInflight = null;
+    }
+  })();
+
+  return pricingInflight;
 }
 
 export interface ApiNotification {
@@ -124,69 +179,124 @@ async function authFetch(path: string, options: RequestInit = {}) {
   return fetch(`${getApiUrl()}${path}`, { ...options, headers });
 }
 
-async function fetchAllPages(path: string): Promise<unknown[]> {
-  const items: unknown[] = [];
+async function fetchMediaPage(
+  path: string,
+  signal?: AbortSignal,
+): Promise<{ items: ApiMedia[]; count: number }> {
+  const apiPath = path.startsWith("/") ? path : `/${path}`;
   const apiBase = getApiUrl();
-  let url: string | null = `${apiBase}${path}`;
+  const url = path.startsWith("http") ? path : `${apiBase}${apiPath}`;
+  const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
 
-  while (url) {
-    const res = await fetch(url);
-    if (!res.ok) break;
-    const data = await res.json();
-    if (Array.isArray(data)) return data;
-    items.push(...(data.results || []));
+  let res = token
+    ? await authFetch(apiPath, { signal })
+    : await fetch(url, { signal });
 
-    const next = data.next as string | null;
-    if (!next) {
-      url = null;
-      continue;
-    }
-    // Normaliser la pagination Django vers notre base API
-    try {
-      const parsed = new URL(next);
-      url = `${apiBase}${parsed.pathname.replace(/^\/api/, "")}${parsed.search}`;
-    } catch {
-      url = next.startsWith("/") ? `${apiBase.replace(/\/api$/, "")}${next}` : next;
-    }
+  // JWT expiré/invalide : la liste publique reste accessible sans auth
+  if ((res.status === 401 || res.status === 403) && token) {
+    res = await fetch(url, { signal });
   }
 
-  return items;
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+
+  if (Array.isArray(data)) {
+    return { items: data as ApiMedia[], count: data.length };
+  }
+
+  return {
+    items: (data.results || []) as ApiMedia[],
+    count: typeof data.count === "number" ? data.count : (data.results?.length ?? 0),
+  };
 }
 
+/** Charge toutes les pages lorsqu'aucun filtre ni recherche n'est actif. */
+async function fetchAllMediaListPages(
+  query: string,
+  signal?: AbortSignal,
+): Promise<{ items: ApiMedia[]; count: number }> {
+  const items: ApiMedia[] = [];
+  let count = 0;
+  let page = 1;
+
+  while (true) {
+    const path = `/media/?${query}&page=${page}`;
+    const { items: pageItems, count: total } = await fetchMediaPage(path, signal);
+    count = total;
+    items.push(...pageItems);
+    if (pageItems.length === 0 || items.length >= total) break;
+    page += 1;
+  }
+
+  return { items, count };
+}
+
+export async function fetchMediaList(
+  params: MediaListParams,
+  signal?: AbortSignal,
+): Promise<{ items: ApiMedia[]; count: number }> {
+  const unfiltered = !hasMediaListFilters(params);
+  const listParams: MediaListParams = unfiltered
+    ? { ...params, pageSize: UNFILTERED_PAGE_SIZE }
+    : { ...params, pageSize: params.pageSize ?? DEFAULT_PAGE_SIZE };
+  const query = buildMediaListQuery(listParams);
+  const cacheKey = unfiltered ? `all:${query}` : query;
+
+  const cached = listCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  const pending = inflight.get(cacheKey);
+  if (pending) return pending;
+
+  const promise = (unfiltered
+    ? fetchAllMediaListPages(query, signal)
+    : fetchMediaPage(`/media/?${query}`, signal)
+  )
+    .then((data) => {
+      listCache.set(cacheKey, { ts: Date.now(), data });
+      return data;
+    })
+    .finally(() => {
+      inflight.delete(cacheKey);
+    });
+
+  inflight.set(cacheKey, promise);
+  return promise;
+}
+
+/** Médias similaires — une seule page légère. */
 export async function fetchMedia(type?: "photo" | "video", category?: string): Promise<ApiMedia[]> {
-  const params = new URLSearchParams();
-  if (type) params.set("type", type);
-  if (category) params.set("category", category);
-  const query = params.toString();
-  const path = query ? `/media/?${query}` : "/media/";
-  const cacheKey = query || "all";
-
-  try {
-    const items = (await fetchAllPages(path)) as ApiMedia[];
-    if (items.length > 0) writeMediaCache(cacheKey, items);
-    return items;
-  } catch {
-    return readMediaCache(cacheKey) || [];
-  }
-}
-
-/** Retourne le cache sessionStorage immédiatement (affichage instantané). */
-export function getCachedMedia(type?: "photo" | "video", category?: string): ApiMedia[] | null {
-  const params = new URLSearchParams();
-  if (type) params.set("type", type);
-  if (category) params.set("category", category);
-  const query = params.toString();
-  return readMediaCache(query || "all");
+  if (!type) return [];
+  const { items } = await fetchMediaList({ type, category, sort: "recent", pageSize: 8 });
+  return items;
 }
 
 export async function fetchMediaById(id: number): Promise<ApiMedia | null> {
   try {
-    const res = await fetch(`${getApiUrl()}/media/${id}/`);
+    const apiBase = getApiUrl();
+    const url = `${apiBase}/media/${id}/`;
+    const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
+
+    let res = token ? await authFetch(`/media/${id}/`) : await fetch(url);
+    if ((res.status === 401 || res.status === 403) && token) {
+      res = await fetch(url);
+    }
+
     if (!res.ok) return null;
     return res.json();
   } catch {
     return null;
   }
+}
+
+export async function toggleMediaLike(
+  mediaId: number,
+): Promise<{ likes_count: number; is_liked: boolean } | null> {
+  const res = await authFetch(`/media/${mediaId}/like/`, { method: "POST" });
+  if (!res.ok) return null;
+  return res.json();
 }
 
 async function authFetchAllPages(path: string): Promise<unknown[]> {

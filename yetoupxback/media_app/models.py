@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.utils import OperationalError, ProgrammingError
 from django.core.validators import FileExtensionValidator, MinValueValidator
 
 
@@ -10,33 +11,85 @@ def media_upload_path(instance, filename):
 
 
 
+class Category(models.Model):
+    """Catégorie de média, gérable dynamiquement depuis l'admin (ajout, renommage, ordre, activation)."""
+    name = models.CharField("Nom", max_length=100)
+    slug = models.SlugField(
+        "Identifiant (slug)", max_length=30, unique=True,
+        help_text="Utilisé dans les filtres et l'API. Sans espace ni accent (ex: nature, paysages).",
+    )
+    order = models.PositiveIntegerField("Ordre d'affichage", default=0)
+    is_active = models.BooleanField(
+        "Active", default=True,
+        help_text="Décochez pour masquer cette catégorie des filtres sans supprimer les médias associés.",
+    )
+    created_at = models.DateTimeField("Créée le", auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "name"]
+        verbose_name = "Catégorie"
+        verbose_name_plural = "Catégories"
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def choices(cls):
+        """Choix dynamiques pour le champ Media.category (Django 5+ : choices callable).
+
+        Repli sur une liste vide si la table n'existe pas encore (avant migration).
+        """
+        try:
+            return [(c.slug, c.name) for c in cls.objects.filter(is_active=True)]
+        except (OperationalError, ProgrammingError):
+            return []
+
+
+class Quality(models.Model):
+    """Qualité de média (HD, 4K, ...), gérable dynamiquement depuis l'admin.
+
+    Utilisée à la fois pour Media.quality et PricingConfig.quality : ajouter une
+    qualité ici la rend immédiatement disponible partout (formulaires, filtres, tarifs).
+    """
+    name = models.CharField("Nom", max_length=50)
+    slug = models.SlugField(
+        "Code technique", max_length=10, unique=True,
+        help_text="Valeur exacte utilisée en base et dans l'API (ex: HD, 4K, 8K). Respectez la casse.",
+    )
+    order = models.PositiveIntegerField("Ordre d'affichage", default=0)
+    is_active = models.BooleanField(
+        "Active", default=True,
+        help_text="Décochez pour masquer cette qualité des filtres et des tarifs sans supprimer les médias associés.",
+    )
+    created_at = models.DateTimeField("Créée le", auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "name"]
+        verbose_name = "Qualité"
+        verbose_name_plural = "Qualités"
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def choices(cls):
+        """Choix dynamiques pour Media.quality / PricingConfig.quality (Django 5+ : choices callable)."""
+        try:
+            return [(q.slug, q.name) for q in cls.objects.filter(is_active=True)]
+        except (OperationalError, ProgrammingError):
+            return []
+
+
 class Media(models.Model):
     TYPE_CHOICES = [("photo", "Photo"), ("video", "Vidéo")]
-    CATEGORY_CHOICES = [
-        ("paysages", "Paysages"),
-        ("nature", "Nature & fleuves"),
-        ("foret", "Forêt équatoriale"),
-        ("mer", "Mer & Océan"),
-        ("lac", "Lac & Lagune"),
-        ("riviere", "Rivière & Fleuve"),
-        ("village", "Village traditionnel"),
-        ("ville", "Ville & Architecture"),
-        ("culture", "Culture & traditions"),
-        ("events", "Événements"),
-        ("archi", "Architecture moderne"),
-        ("faune", "Faune sauvage"),
-        ("flore", "Flore & Végétation"),
-        ("aerial", "Vue aérienne"),
-        ("nocturne", "Vue nocturne"),
-        ("coucher", "Coucher de soleil"),
-    ]
-    QUALITY_CHOICES = [
-        ("720", "720p"),
-        ("1080", "1080p"),
-        ("HD", "HD"),
-        ("4K", "4K"),
-    ]
     STATUS_CHOICES = [("draft", "Brouillon"), ("published", "Publié"), ("archived", "Archivé")]
+    LICENSE_CHOICES = [
+        ("Commerciale · Illimitée", "Commerciale · Illimitée (web, print, publicité — sans limite d'usage)"),
+        ("Usage web uniquement", "Usage web uniquement (sites internet, réseaux sociaux, newsletters)"),
+        ("Usage éditorial", "Usage éditorial (presse, actualités — usage non commercial)"),
+        ("Usage personnel", "Usage personnel (usage privé, non commercial, non revendable)"),
+        ("Exclusive", "Exclusive (droits exclusifs, média retiré du catalogue public après achat)"),
+    ]
 
     # ─── Général ───
     title = models.CharField("Titre", max_length=255,
@@ -45,10 +98,10 @@ class Media(models.Model):
         help_text="Description détaillée visible sur la page du média.")
     type = models.CharField("Type de média", max_length=10, choices=TYPE_CHOICES,
         help_text="Photo : image fixe. Vidéo : séquence animée.")
-    category = models.CharField("Catégorie", max_length=20, choices=CATEGORY_CHOICES,
-        help_text="Catégorie principale pour le classement et les filtres.")
-    quality = models.CharField("Qualité", max_length=10, choices=QUALITY_CHOICES, default="HD",
-        help_text="Qualité du média : 720p, 1080p, HD ou 4K.")
+    category = models.CharField("Catégorie", max_length=30, choices=Category.choices,
+        help_text="Catégorie principale pour le classement et les filtres. Gérées dans « Catégories ».")
+    quality = models.CharField("Qualité", max_length=10, choices=Quality.choices, default="HD",
+        help_text="Qualité du média. Gérée dans « Qualités ». Détermine le prix (voir Paiements → Configurations de prix).")
     status = models.CharField("Statut de publication", max_length=15, choices=STATUS_CHOICES, default="draft",
         help_text="Brouillon : invisible. Publié : visible et achetable. Archivé : masqué mais conservé.")
 
@@ -58,11 +111,13 @@ class Media(models.Model):
         help_text="Sélectionnez le fichier image ou vidéo. Stockage automatique sur Cloudflare R2. Formats acceptés : JPG, PNG, WebP, AVIF, MP4, WebM, MOV.")
     thumbnail = models.ImageField("Miniature", upload_to=media_upload_path, blank=True, null=True,
         help_text="Image d'aperçu affichée dans les grilles et listes. Pour les vidéos, choisissez une image représentative. Format recommandé : 16/9.")
-    license_type = models.CharField("Type de licence", max_length=50, default="Commerciale · Illimitée",
+    license_type = models.CharField("Type de licence", max_length=50, choices=LICENSE_CHOICES,
+        default="Commerciale · Illimitée",
         help_text="Droits accordés à l'acheteur. Par défaut : licence commerciale illimitée (usage web, print, publicité).")
     price = models.PositiveIntegerField("Prix (FCFA)", default=1500,
         validators=[MinValueValidator(500, "Le prix minimum est de 500 FCFA.")],
-        help_text="Prix minimum : 500 FCFA. Tarifs recommandés : Photo HD 1 500, Photo 4K 3 000, Vidéo 30s 5 000, Vidéo 1min 10 000.")
+        help_text="Calculé automatiquement depuis la configuration de prix (type + qualité). "
+                   "Modifiable uniquement s'il n'existe aucune configuration pour cette combinaison.")
 
     # ─── Photo ───
     width = models.PositiveIntegerField("Largeur (px)", null=True, blank=True,
@@ -145,6 +200,13 @@ class Media(models.Model):
     def __str__(self):
         return f"[{self.get_type_display()}] {self.title}"
 
+    def save(self, *args, **kwargs):
+        """Applique automatiquement le tarif configuré (type + qualité) s'il existe."""
+        configured_price = PricingConfig.get_price(self.type, self.quality)
+        if configured_price is not None:
+            self.price = configured_price
+        super().save(*args, **kwargs)
+
     @property
     def file_url(self):
         return self.file.url if self.file else ""
@@ -168,7 +230,17 @@ class Purchase(models.Model):
     # Infos de paiement
     payment_method = models.CharField("Méthode de paiement", max_length=20, blank=True, default="")
     payment_reference = models.CharField("Référence transaction", max_length=255, blank=True, default="")
-    payment_status = models.CharField("Statut du paiement", max_length=15, blank=True, default="success")
+    PAYMENT_STATUS_CHOICES = [
+        ("pending", "En attente"),
+        ("success", "Réussi"),
+        ("simulated", "Simulé"),
+        ("failed", "Échoué"),
+    ]
+    payment_status = models.CharField(
+        "Statut du paiement", max_length=15, choices=PAYMENT_STATUS_CHOICES, blank=True, default="success",
+    )
+
+    PAID_STATUSES = ("success", "simulated")
 
     class Meta:
         ordering = ["-purchased_at"]
@@ -263,8 +335,8 @@ class PaygateSession(models.Model):
 class PricingConfig(models.Model):
     """Configuration des prix par type et qualité de média."""
     media_type = models.CharField("Type de média", max_length=10, choices=[("photo", "Photo"), ("video", "Vidéo")])
-    quality = models.CharField("Qualité", max_length=20, choices=Media.QUALITY_CHOICES,
-        help_text="720p, 1080p, HD ou 4K")
+    quality = models.CharField("Qualité", max_length=10, choices=Quality.choices,
+        help_text="Qualité concernée par ce tarif. Gérée dans « Qualités ».")
     price = models.PositiveIntegerField("Prix (FCFA)", validators=[MinValueValidator(500)],
         help_text="Prix minimum : 500 FCFA")
     description = models.CharField("Description", max_length=255, blank=True,
@@ -290,3 +362,28 @@ class PricingConfig(models.Model):
     @classmethod
     def get_pricing_table(cls):
         return cls.objects.filter(is_active=True).order_by("media_type", "order")
+
+
+class MediaLike(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="media_likes",
+    )
+    media = models.ForeignKey(
+        Media,
+        on_delete=models.CASCADE,
+        related_name="likes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [["user", "media"]]
+        verbose_name = "Like média"
+        verbose_name_plural = "Likes médias"
+        indexes = [
+            models.Index(fields=["media", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.email} ♥ {self.media.title}"

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { createPurchase, confirmFedapayPayment } from "@/services/api";
+import { createPurchase, confirmFedapayPayment, checkPaymentStatus } from "@/services/api";
 import { getApiUrl } from "@/lib/api-url";
 
 function PaiementRetourContent() {
@@ -12,6 +12,20 @@ function PaiementRetourContent() {
   const { setPlan } = useAuth();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("Vérification de votre paiement...");
+  const [returnTo, setReturnTo] = useState("/dashboard?tab=downloads");
+
+  function readReturnTo(): string {
+    try {
+      const raw = localStorage.getItem("yetou_pending_purchase");
+      if (raw) {
+        const pending = JSON.parse(raw);
+        if (typeof pending?.returnTo === "string" && pending.returnTo) return pending.returnTo;
+      }
+    } catch {
+      /* ignore */
+    }
+    return "/dashboard?tab=downloads";
+  }
 
   useEffect(() => {
     const ref = searchParams.get("ref");
@@ -19,9 +33,12 @@ function PaiementRetourContent() {
     const transactionId = searchParams.get("id");
     const singpayStatus = searchParams.get("status");
 
+    const rt = readReturnTo();
+    setReturnTo(rt);
+
     // Retour FedaPay (carte) : ?ref=...&id=...&status=approved
     if (ref && transactionId && fedapayStatus === "approved") {
-      handleFedapaySuccess(ref, transactionId);
+      handleFedapaySuccess(ref, transactionId, rt);
       return;
     }
     if (fedapayStatus === "canceled") {
@@ -32,12 +49,11 @@ function PaiementRetourContent() {
 
     // Retour SingPay (mobile)
     if (singpayStatus === "success" && ref) {
-      handleSingpaySuccess(ref);
+      handleSingpaySuccess(ref, rt);
       return;
     }
     if (singpayStatus === "error") {
-      setStatus("error");
-      setMessage("Le paiement a échoué ou a été annulé. Vous pouvez réessayer.");
+      handleSingpayError(ref, rt);
       return;
     }
 
@@ -46,7 +62,7 @@ function PaiementRetourContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  async function handleFedapaySuccess(reference: string, transactionId: string) {
+  async function handleFedapaySuccess(reference: string, transactionId: string, rt: string) {
     try {
       const token = localStorage.getItem("yetou_token");
       if (!token) {
@@ -83,14 +99,34 @@ function PaiementRetourContent() {
       localStorage.removeItem("yetou_pending_purchase");
       setStatus("success");
       setMessage("Paiement confirmé ! Votre achat est disponible dans le dashboard.");
-      setTimeout(() => router.push("/dashboard?tab=downloads"), 2000);
+      setTimeout(() => router.push(rt), 2000);
     } catch {
       setStatus("error");
       setMessage("Erreur lors de la validation du paiement.");
     }
   }
 
-  async function handleSingpaySuccess(reference: string) {
+  async function handleSingpayError(reference: string | null, rt: string) {
+    if (!reference) {
+      setStatus("error");
+      setMessage("Le paiement a échoué ou a été annulé. Vous pouvez réessayer.");
+      return;
+    }
+    const result = await checkPaymentStatus(reference);
+    setStatus("error");
+    if (result.status === "success") {
+      // Le webhook a confirmé le succès entre-temps malgré la redirection d'erreur.
+      handleSingpaySuccess(reference, rt);
+      return;
+    }
+    setMessage(
+      result.status === "failed"
+        ? result.message
+        : "Le paiement a échoué ou a été annulé. Vous pouvez réessayer.",
+    );
+  }
+
+  async function handleSingpaySuccess(reference: string, rt: string) {
     try {
       const pendingRaw = localStorage.getItem("yetou_pending_purchase");
       const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
@@ -98,7 +134,7 @@ function PaiementRetourContent() {
       if (!pending || pending.reference !== reference) {
         setStatus("success");
         setMessage("Paiement confirmé par SingPay. Si l'achat n'apparaît pas, contactez le support avec la référence : " + reference);
-        setTimeout(() => router.push("/dashboard?tab=downloads"), 3000);
+        setTimeout(() => router.push(rt), 3000);
         return;
       }
 
@@ -142,7 +178,7 @@ function PaiementRetourContent() {
 
       setStatus("success");
       setMessage("Paiement confirmé ! Votre achat est disponible dans le dashboard.");
-      setTimeout(() => router.push("/dashboard?tab=downloads"), 2000);
+      setTimeout(() => router.push(rt), 2000);
     } catch {
       setStatus("error");
       setMessage("Erreur lors de la validation du paiement.");
@@ -197,10 +233,10 @@ function PaiementRetourContent() {
           <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center", maxWidth: 420 }}>{message}</p>
           <button
             className="btn-primary"
-            onClick={() => router.push("/dashboard?tab=downloads")}
+            onClick={() => router.push(returnTo)}
             style={{ marginTop: "8px", padding: "10px 24px" }}
           >
-            Aller au dashboard
+            Retour
           </button>
         </>
       )}

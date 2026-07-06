@@ -146,6 +146,21 @@ CORS_ALLOW_CREDENTIALS = True
 
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
+# ─── Logging ───
+# Sans cette config, les logger.info(...) de l'app (webhooks, FedaPay...) sont
+# silencieusement ignorés (seul le niveau WARNING+ remonte par défaut).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "media_app": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "users_app": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+
 # ─── REST Framework ───
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

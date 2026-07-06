@@ -185,6 +185,53 @@ def log_payment(request):
         return Response({"error": str(e)}, status=400)
 
 
+FAILURE_REASON_MAP = (
+    ("insuffi", "Solde insuffisant sur votre compte mobile money."),
+    ("mot de passe", "Mot de passe / code PIN incorrect."),
+    ("pin", "Mot de passe / code PIN incorrect."),
+    ("incorrect", "Mot de passe / code PIN incorrect."),
+    ("invalid", "Informations de paiement invalides."),
+    ("annul", "Paiement annulé."),
+    ("cancel", "Paiement annulé."),
+    ("refus", "Paiement refusé par votre opérateur."),
+    ("declin", "Paiement refusé par votre opérateur."),
+    ("reject", "Paiement refusé par votre opérateur."),
+    ("timeout", "Le délai de paiement a expiré. Veuillez réessayer."),
+    ("expir", "Le délai de paiement a expiré. Veuillez réessayer."),
+)
+
+
+def _friendly_failure_reason(raw_message: str) -> str:
+    lowered = (raw_message or "").lower()
+    for marker, friendly in FAILURE_REASON_MAP:
+        if marker in lowered:
+            return friendly
+    return raw_message or "Le paiement a échoué ou a été annulé."
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def payment_status_check(request):
+    """
+    Consultation publique du statut réel d'un paiement (SingPay ou FedaPay)
+    à partir de sa référence — utilisé par la page /paiement/retour pour
+    afficher un message explicite (succès, solde insuffisant, PIN erroné...).
+    """
+    reference = str(request.query_params.get("reference", "")).strip()
+    if not reference:
+        return Response({"error": "reference requise."}, status=400)
+
+    log = PaymentLog.objects.filter(reference=reference).order_by("-created_at").first()
+    if not log:
+        return Response({"status": "unknown", "message": "Référence introuvable."}, status=404)
+
+    if log.status == "success":
+        return Response({"status": "success", "message": "Paiement confirmé avec succès."})
+    if log.status == "failed":
+        return Response({"status": "failed", "message": _friendly_failure_reason(log.message)})
+    return Response({"status": "pending", "message": "Paiement en attente de confirmation."})
+
+
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
 def singpay_webhook(request):
@@ -225,25 +272,56 @@ def singpay_webhook(request):
         logger.warning("SingPay webhook reçu sans SINGPAY_WEBHOOK_SECRET configuré.")
 
     data = request.data
-    reference = data.get("reference", "")
-    singpay_status = str(data.get("status", "")).upper()
-    transaction_id = str(data.get("transaction_id", ""))
-    amount = data.get("amount", 0)
-    phone = str(data.get("client_msisdn", ""))
+    logger.info("SingPay webhook payload brut: %s", dict(data) if hasattr(data, "keys") else data)
+
+    # SingPay imbrique les infos utiles dans "transaction" et le résultat API
+    # dans "status" (objet, pas une simple chaîne "SUCCESS"/"FAILED").
+    transaction = data.get("transaction") if isinstance(data.get("transaction"), dict) else {}
+    status_obj = data.get("status") if isinstance(data.get("status"), dict) else {}
+
+    reference = transaction.get("reference") or data.get("reference", "")
+    transaction_id = str(
+        transaction.get("airtel_money_id")
+        or transaction.get("moov_money_id")
+        or transaction.get("_id")
+        or transaction.get("id")
+        or data.get("transaction_id", "")
+        or ""
+    )
+    amount = transaction.get("amount", data.get("amount", 0))
+    phone = str(transaction.get("client_msisdn", data.get("client_msisdn", "")))
+
+    tx_lifecycle = str(transaction.get("status", "")).strip().lower()
+    tx_result = str(transaction.get("result", "")).strip()
+    api_message = str(status_obj.get("message", "")).strip()
+
+    failure_markers = (
+        "error", "fail", "insuffi", "cancel", "annul", "reject",
+        "invalid", "incorrect", "timeout", "expir", "declin", "refus",
+    )
+    text_to_check = f"{tx_result} {api_message}".lower()
+    is_failure = any(marker in text_to_check for marker in failure_markers)
+
+    if is_failure:
+        singpay_status = "FAILED"
+    elif tx_result and tx_lifecycle in ("terminate", "success", "completed", "done", "paid"):
+        singpay_status = "SUCCESS"
+    else:
+        singpay_status = "PENDING"
 
     logger.info(
-        "SingPay webhook: ref=%s status=%s tx=%s",
-        reference, singpay_status, transaction_id,
+        "SingPay webhook: ref=%s status=%s tx=%s result=%s message=%s",
+        reference, singpay_status, transaction_id, tx_result, api_message,
     )
 
     # ── Mettre à jour le PaymentLog si il existe ───────────────────────
-    log_status = "success" if singpay_status == "SUCCESS" else "failed"
+    log_status = {"SUCCESS": "success", "FAILED": "failed"}.get(singpay_status, "pending")
     PaymentLog.objects.filter(reference=reference).update(
         status=log_status,
         transaction_id=transaction_id or PaymentLog.objects.filter(
             reference=reference,
         ).values_list("transaction_id", flat=True).first() or "",
-        message=f"Webhook SingPay: {singpay_status}",
+        message=f"Webhook SingPay: {singpay_status} — {api_message}"[:500],
     )
 
     # ── Si succès et qu'aucun achat n'a encore été créé ────────────────

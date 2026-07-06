@@ -433,6 +433,21 @@ export async function confirmFedapayPayment(data: {
   return { ok: true };
 }
 
+export async function checkPaymentStatus(
+  reference: string,
+): Promise<{ status: "success" | "failed" | "pending" | "unknown"; message: string }> {
+  try {
+    const res = await fetch(`${getApiUrl()}/payments/status/?reference=${encodeURIComponent(reference)}`);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { status: "unknown", message: body.message || body.error || "Statut introuvable." };
+    }
+    return body as { status: "success" | "failed" | "pending" | "unknown"; message: string };
+  } catch {
+    return { status: "unknown", message: "Impossible de vérifier le statut du paiement." };
+  }
+}
+
 export async function fetchCardPaymentStatus(): Promise<{ enabled: boolean; provider: string | null }> {
   try {
     const res = await fetch(`${getApiUrl()}/payments/card/status/`);

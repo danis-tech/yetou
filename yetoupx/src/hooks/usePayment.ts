@@ -80,6 +80,7 @@ export function usePayment() {
           plan,
           paymentMethod: method,
           timestamp: Date.now(),
+          returnTo: window.location.pathname + window.location.search,
         }),
       );
 
@@ -131,6 +132,7 @@ export function usePayment() {
           paymentMethod: method,
           provider: "fedapay",
           timestamp: Date.now(),
+          returnTo: window.location.pathname + window.location.search,
         }),
       );
 

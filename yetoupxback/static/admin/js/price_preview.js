@@ -27,7 +27,7 @@
         priceRow.style.color = "";
       } else {
         priceRow.textContent = originalText + " — aucun tarif configuré pour cette combinaison";
-        priceRow.style.color = "#8A8A95";
+        priceRow.style.color = "var(--body-quiet-color)";
       }
     }
 

@@ -197,7 +197,7 @@ MODEL_SECTIONS = {
     "quality": "Catégories & Qualités",
     "purchase": "Paiements",
     "paymentlog": "Paiements",
-    "paygatesession": "Paiements",
+    "paymentsession": "Paiements",
     "pricingconfig": "Paiements",
     "notification": "Activités",
     "logentry": "Activités",
@@ -207,7 +207,7 @@ MODEL_ORDER = [
     "media", "medialike",
     "user",
     "category", "quality",
-    "purchase", "paymentlog", "paygatesession", "pricingconfig",
+    "purchase", "paymentlog", "paymentsession", "pricingconfig",
     "notification", "logentry",
 ]
 

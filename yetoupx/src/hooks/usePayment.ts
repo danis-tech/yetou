@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import type { BuyItem, UserPlan } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { createPurchase, initiateFedapayPayment } from "@/services/api";
+import { createPurchase, initiateFedapayPayment, initiateSingpayPayment } from "@/services/api";
 import { getApiUrl } from "@/lib/api-url";
 import { CARD_METHODS, MOBILE_METHODS } from "@/lib/payment-methods";
 
@@ -45,15 +45,40 @@ export function usePayment() {
 
   const externalize = useCallback(async (opts: ExternalizeOptions): Promise<boolean> => {
     const { mediaId, buyItem, method, onError } = opts;
-    const reference = buildPaymentReference();
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
+    if (!token) {
+      onError?.("Connectez-vous pour payer par mobile money ou PayPal.");
+      return false;
+    }
+
+    let plan: UserPlan | null = null;
+    if (buyItem.name.includes("Abonnement Mensuel")) plan = "monthly";
+    if (buyItem.name.includes("Abonnement Pro")) plan = "pro";
 
     setLoading(true);
     try {
+      // Crée la session côté serveur (Django) d'abord : le montant y est recalculé
+      // à partir du média, jamais fait confiance au montant envoyé par le client.
+      const session = await initiateSingpayPayment({
+        media_id: mediaId ?? null,
+        amount_fcfa: parseAmount(buyItem.price),
+        method,
+        plan: plan || undefined,
+      });
+
+      if (!session.ok) {
+        onError?.(session.error);
+        return false;
+      }
+
+      const { reference, amount_fcfa } = session.data;
+
       const res = await fetch("/api/paiement/ext", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: parseAmount(buyItem.price),
+          amount: amount_fcfa,
           reference,
           method,
         }),
@@ -67,10 +92,6 @@ export function usePayment() {
 
       const finalRef = data.reference || reference;
 
-      let plan: UserPlan | null = null;
-      if (buyItem.name.includes("Abonnement Mensuel")) plan = "monthly";
-      if (buyItem.name.includes("Abonnement Pro")) plan = "pro";
-
       localStorage.setItem(
         "yetou_pending_purchase",
         JSON.stringify({
@@ -79,6 +100,7 @@ export function usePayment() {
           mediaId: mediaId ?? null,
           plan,
           paymentMethod: method,
+          provider: "singpay",
           timestamp: Date.now(),
           returnTo: window.location.pathname + window.location.search,
         }),

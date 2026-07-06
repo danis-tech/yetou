@@ -5,30 +5,30 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
-  <div style="background:linear-gradient(135deg,#14141A,#1a1a25);border:1px solid #2A2A35;border-radius:12px;padding:20px 24px;flex:1;min-width:180px">
-    <div style="font-size:11px;color:#8A8A95;font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Inscriptions</div>
-    <div style="font-family:Sora,sans-serif;font-size:32px;font-weight:700;color:#F0EFEA">{{ total_users|default:"0" }}</div>
-    <div style="font-size:11px;color:#8A8A95;margin-top:4px">comptes créés</div>
+  <div class="yetou-kpi">
+    <div class="yetou-kpi-label">Inscriptions</div>
+    <div class="yetou-kpi-value">{{ total_users|default:"0" }}</div>
+    <div class="yetou-kpi-sub">comptes créés</div>
   </div>
-  <div style="background:linear-gradient(135deg,#14141A,#1a1a25);border:1px solid #2A2A35;border-radius:12px;padding:20px 24px;flex:1;min-width:180px">
-    <div style="font-size:11px;color:#8A8A95;font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Abonnés</div>
-    <div style="font-family:Sora,sans-serif;font-size:32px;font-weight:700;color:#C8371A">{{ subscribers|default:"0" }}</div>
-    <div style="font-size:11px;color:#8A8A95;margin-top:4px">{{ subscriber_details|default:"" }}</div>
+  <div class="yetou-kpi">
+    <div class="yetou-kpi-label">Abonnés</div>
+    <div class="yetou-kpi-value" style="color:var(--primary)">{{ subscribers|default:"0" }}</div>
+    <div class="yetou-kpi-sub">{{ subscriber_details|default:"" }}</div>
   </div>
-  <div style="background:linear-gradient(135deg,#14141A,#1a1a25);border:1px solid #2A2A35;border-radius:12px;padding:20px 24px;flex:1;min-width:180px">
-    <div style="font-size:11px;color:#8A8A95;font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Recette jour</div>
-    <div style="font-family:Sora,sans-serif;font-size:32px;font-weight:700;color:#22c55e">{{ today_revenue|default:"0" }} <small style="font-size:14px;color:#8A8A95;font-weight:400">FCFA</small></div>
-     <div style="font-size:11px;color:#8A8A95;margin-top:4px">{{ today_orders|default:"0" }} achat(s)</div>
+  <div class="yetou-kpi">
+    <div class="yetou-kpi-label">Recette jour</div>
+    <div class="yetou-kpi-value" style="color:#22c55e">{{ today_revenue|default:"0" }} <small class="yetou-kpi-unit">FCFA</small></div>
+    <div class="yetou-kpi-sub">{{ today_orders|default:"0" }} achat(s)</div>
   </div>
-  <div style="background:linear-gradient(135deg,#14141A,#1a1a25);border:1px solid #2A2A35;border-radius:12px;padding:20px 24px;flex:1;min-width:180px">
-    <div style="font-size:11px;color:#8A8A95;font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">CA mois</div>
-    <div style="font-family:Sora,sans-serif;font-size:32px;font-weight:700;color:#F0EFEA">{{ month_revenue|default:"0" }} <small style="font-size:14px;color:#8A8A95;font-weight:400">FCFA</small></div>
-     <div style="font-size:11px;color:#8A8A95;margin-top:4px">{{ month_orders|default:"0" }} achat(s)</div>
+  <div class="yetou-kpi">
+    <div class="yetou-kpi-label">CA mois</div>
+    <div class="yetou-kpi-value">{{ month_revenue|default:"0" }} <small class="yetou-kpi-unit">FCFA</small></div>
+    <div class="yetou-kpi-sub">{{ month_orders|default:"0" }} achat(s)</div>
   </div>
-  <div style="background:linear-gradient(135deg,#14141A,#1a1a25);border:1px solid #2A2A35;border-radius:12px;padding:20px 24px;flex:1;min-width:180px">
-    <div style="font-size:11px;color:#8A8A95;font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">CA total</div>
-     <div style="font-family:Sora,sans-serif;font-size:32px;font-weight:700;color:#F0EFEA">{{ total_revenue|default:0|floatformat:0 }} <small style="font-size:14px;color:#8A8A95;font-weight:400">FCFA</small></div>
-    <div style="font-size:11px;color:#8A8A95;margin-top:4px">{{ total_purchases|default:"0" }} achats · {{ total_media|default:"0" }} médias</div>
+  <div class="yetou-kpi">
+    <div class="yetou-kpi-label">CA total</div>
+    <div class="yetou-kpi-value">{{ total_revenue|default:0|floatformat:0 }} <small class="yetou-kpi-unit">FCFA</small></div>
+    <div class="yetou-kpi-sub">{{ total_purchases|default:"0" }} achats · {{ total_media|default:"0" }} médias</div>
   </div>
 </div>
 
@@ -47,14 +47,14 @@
 
     <div class="yetou-stats-row">
       <div class="yetou-card" style="flex:1.6;min-width:260px">
-        <div class="yetou-card-accent" style="background:#C8371A"></div>
+        <div class="yetou-card-accent" style="background:var(--primary)"></div>
         <div class="yetou-card-head">
           <h2><i class="ti ti-trending-up"></i> Évolution du CA</h2>
           <span class="yetou-card-sub">14 derniers jours</span>
         </div>
         <div class="yetou-legend">
-          <span><i style="background:#C8371A"></i>Recette (FCFA)</span>
-          <span><i style="background:#8A8A95"></i>Commandes</span>
+          <span><i style="background:var(--primary)"></i>Recette (FCFA)</span>
+          <span><i style="background:var(--body-quiet-color)"></i>Commandes</span>
         </div>
         <div class="yetou-chart-box" style="height:200px"><canvas id="chart-revenue"></canvas></div>
       </div>
@@ -77,7 +77,7 @@
               <strong id="chart-type-photo">0</strong>
             </div>
             <div class="yetou-stat-row">
-              <span><i style="background:#C8371A"></i>Vidéos</span>
+              <span><i style="background:var(--primary)"></i>Vidéos</span>
               <strong id="chart-type-video">0</strong>
             </div>
           </div>
@@ -95,28 +95,28 @@
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr>
-              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Client</th>
-              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Média</th>
-              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Type</th>
-              <th style="text-align:right;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Prix</th>
-              <th style="text-align:right;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Téléchargements</th>
-              <th style="text-align:left;padding:8px 12px;font-size:10px;font-weight:700;color:#8A8A95;text-transform:uppercase;border-bottom:1px solid #2A2A35">Date</th>
+              <th class="yetou-th">Client</th>
+              <th class="yetou-th">Média</th>
+              <th class="yetou-th">Type</th>
+              <th class="yetou-th" style="text-align:right">Prix</th>
+              <th class="yetou-th" style="text-align:right">Téléchargements</th>
+              <th class="yetou-th">Date</th>
             </tr>
           </thead>
           <tbody>
             {% for p in recent_purchases %}
-            <tr style="border-bottom:1px solid #1A1A25">
-              <td style="padding:10px 12px;font-size:12px;color:#F0EFEA">{{ p.user.email|truncatechars:30 }}</td>
-              <td style="padding:10px 12px;font-size:12px;color:#F0EFEA">{{ p.media.title|truncatechars:40 }}</td>
+            <tr class="yetou-tr">
+              <td class="yetou-td">{{ p.user.email|truncatechars:30 }}</td>
+              <td class="yetou-td">{{ p.media.title|truncatechars:40 }}</td>
               <td style="padding:10px 12px">
-                <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:{% if p.media.type == 'video' %}rgba(200,55,26,0.15){% else %}rgba(34,197,94,0.1){% endif %};color:{% if p.media.type == 'video' %}#C8371A{% else %}#22c55e{% endif %}">{{ p.media.get_type_display }}</span>
+                <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:{% if p.media.type == 'video' %}rgba(200,55,26,0.15){% else %}rgba(34,197,94,0.1){% endif %};color:{% if p.media.type == 'video' %}var(--primary){% else %}#22c55e{% endif %}">{{ p.media.get_type_display }}</span>
               </td>
-              <td style="padding:10px 12px;font-size:13px;font-weight:700;color:#F0EFEA;text-align:right">{{ p.price }} FCFA</td>
-              <td style="padding:10px 12px;font-size:12px;color:#8A8A95;text-align:right">{{ p.download_count }}/{{ p.max_downloads }}</td>
-              <td style="padding:10px 12px;font-size:11px;color:#8A8A95">{{ p.purchased_at|date:"d/m/Y H:i" }}</td>
+              <td class="yetou-td" style="font-size:13px;font-weight:700;text-align:right">{{ p.price }} FCFA</td>
+              <td class="yetou-td yetou-td-quiet" style="text-align:right">{{ p.download_count }}/{{ p.max_downloads }}</td>
+              <td class="yetou-td yetou-td-quiet" style="font-size:11px">{{ p.purchased_at|date:"d/m/Y H:i" }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="6" style="padding:24px;text-align:center;color:#8A8A95;font-size:13px">Aucun achat pour le moment.</td></tr>
+            <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--body-quiet-color);font-size:13px">Aucun achat pour le moment.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -135,29 +135,42 @@
 </div>
 
 <style>
+  .yetou-kpi {
+    background: linear-gradient(135deg, var(--card-bg), var(--card-bg-soft));
+    border: 1px solid var(--border-color); border-radius: 12px; padding: 20px 24px;
+    flex: 1; min-width: 180px;
+  }
+  .yetou-kpi-label {
+    font-size: 11px; color: var(--body-quiet-color); font-weight: 500;
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+  }
+  .yetou-kpi-value { font-family: 'Sora', sans-serif; font-size: 32px; font-weight: 700; color: var(--body-fg); }
+  .yetou-kpi-unit { font-size: 14px; color: var(--body-quiet-color); font-weight: 400; }
+  .yetou-kpi-sub { font-size: 11px; color: var(--body-quiet-color); margin-top: 4px; }
+
   .yetou-main-split { display: flex; align-items: stretch; gap: 0; margin-bottom: 28px; }
   .yetou-nav-col {
-    flex: 1; min-width: 0; padding-right: 28px; margin-right: 28px; border-right: 1px solid #2A2A35;
+    flex: 1; min-width: 0; padding-right: 28px; margin-right: 28px; border-right: 1px solid var(--border-color);
     display: flex; flex-direction: column; gap: 16px;
   }
   .yetou-stats-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
   .yetou-stats-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; }
   @media (max-width: 900px) {
     .yetou-main-split { flex-direction: column; }
-    .yetou-nav-col { border-right: none; border-bottom: 1px solid #2A2A35; padding-right: 0; margin-right: 0; padding-bottom: 20px; }
+    .yetou-nav-col { border-right: none; border-bottom: 1px solid var(--border-color); padding-right: 0; margin-right: 0; padding-bottom: 20px; }
   }
 
   .yetou-dash-eyebrow {
     display: flex; align-items: center; gap: 6px;
     font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 1px; color: #8A8A95;
-    padding-bottom: 8px; border-bottom: 1px solid #2A2A35;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--body-quiet-color);
+    padding-bottom: 8px; border-bottom: 1px solid var(--border-color);
   }
-  .yetou-dash-eyebrow i { color: #C8371A; font-size: 13px; }
+  .yetou-dash-eyebrow i { color: var(--primary); font-size: 13px; }
 
   .yetou-card {
     position: relative; overflow: hidden;
-    background: #14141A; border: 1px solid #2A2A35; border-radius: 12px; padding: 20px 24px 22px;
+    background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px 24px 22px;
     display: flex; flex-direction: column;
   }
   .yetou-card-grow { flex: 1; }
@@ -165,14 +178,14 @@
   .yetou-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
   .yetou-card-head h2 {
     display: flex; align-items: center; gap: 8px; margin: 0;
-    font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: #F0EFEA;
+    font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: var(--body-fg);
   }
-  .yetou-card-head h2 i { color: #C8371A; font-size: 15px; }
-  .yetou-card-head a { font-size: 11px; color: #C8371A; text-decoration: none; display: flex; align-items: center; gap: 4px; }
-  .yetou-card-head a:hover { color: #e04528; }
-  .yetou-card-sub { font-size: 11px; color: #8A8A95; }
+  .yetou-card-head h2 i { color: var(--primary); font-size: 15px; }
+  .yetou-card-head a { font-size: 11px; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .yetou-card-head a:hover { color: var(--link-hover-color); }
+  .yetou-card-sub { font-size: 11px; color: var(--body-quiet-color); }
 
-  .yetou-legend { display: flex; gap: 14px; font-size: 10px; color: #8A8A95; margin-bottom: 10px; }
+  .yetou-legend { display: flex; gap: 14px; font-size: 10px; color: var(--body-quiet-color); margin-bottom: 10px; }
   .yetou-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 
   .yetou-chart-box { position: relative; width: 100%; }
@@ -183,184 +196,229 @@
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
     pointer-events: none;
   }
-  .yetou-donut-center strong { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #F0EFEA; line-height: 1.1; }
-  .yetou-donut-center span { font-size: 10px; color: #8A8A95; }
+  .yetou-donut-center strong { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: var(--body-fg); line-height: 1.1; }
+  .yetou-donut-center span { font-size: 10px; color: var(--body-quiet-color); }
   .yetou-stat-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
   .yetou-stat-row {
     display: flex; align-items: center; justify-content: space-between;
-    background: #1A1A22; border: 1px solid #2A2A35; border-radius: 8px; padding: 10px 12px;
+    background: var(--card-bg-soft); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px;
   }
-  .yetou-stat-row span { display: flex; align-items: center; font-size: 12px; color: #F0EFEA; }
+  .yetou-stat-row span { display: flex; align-items: center; font-size: 12px; color: var(--body-fg); }
   .yetou-stat-row span i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
-  .yetou-stat-row strong { font-family: 'Sora', sans-serif; font-size: 15px; color: #F0EFEA; }
+  .yetou-stat-row strong { font-family: 'Sora', sans-serif; font-size: 15px; color: var(--body-fg); }
+
+  .yetou-th {
+    text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700;
+    color: var(--body-quiet-color); text-transform: uppercase; border-bottom: 1px solid var(--border-color);
+  }
+  .yetou-tr { border-bottom: 1px solid var(--hairline-color); }
+  .yetou-td { padding: 10px 12px; font-size: 12px; color: var(--body-fg); }
+  .yetou-td-quiet { color: var(--body-quiet-color); }
 </style>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof Chart === 'undefined') return;
 
-    Chart.defaults.color = '#8A8A95';
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.font.size = 11;
-
-    const gridColor = 'rgba(42,42,53,0.6)';
-    const primary = '#C8371A';
-    const primarySoft = 'rgba(200,55,26,0.15)';
-    const muted = '#8A8A95';
-    const green = '#22c55e';
+    /* Couleurs lues depuis les variables CSS du thème actif (clair/sombre),
+       pour que les graphiques restent cohérents quel que soit le mode. */
+    function themeColors() {
+      const css = getComputedStyle(document.documentElement);
+      const v = (name, fallback) => (css.getPropertyValue(name) || '').trim() || fallback;
+      return {
+        quiet: v('--body-quiet-color', '#8A8A95'),
+        fg: v('--body-fg', '#F0EFEA'),
+        bg: v('--body-bg', '#0A0A0F'),
+        border: v('--border-color', '#2A2A35'),
+        card: v('--card-bg', '#14141A'),
+        cardSoft: v('--card-bg-soft', '#1A1A22'),
+        primary: v('--primary', '#C8371A'),
+        green: '#22c55e',
+      };
+    }
 
     const revenueLabels = {{ chart_revenue_labels|default:"[]"|safe }};
     const revenueData = {{ chart_revenue_data|default:"[]"|safe }};
     const ordersData = {{ chart_orders_data|default:"[]"|safe }};
+    const typeData = {{ chart_type_data|default:"[0,0]"|safe }};
+    const categoryLabels = {{ chart_category_labels|default:"[]"|safe }};
+    const categoryData = {{ chart_category_data|default:"[]"|safe }};
 
     const revenueCanvas = document.getElementById('chart-revenue');
-    if (revenueCanvas) {
-      const ctx = revenueCanvas.getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-      gradient.addColorStop(0, 'rgba(200,55,26,0.35)');
-      gradient.addColorStop(1, 'rgba(200,55,26,0)');
+    const typeCanvas = document.getElementById('chart-type');
+    const categoryCanvas = document.getElementById('chart-category');
+    let revenueChart, typeChart, categoryChart;
 
-      new Chart(revenueCanvas, {
-        type: 'line',
-        data: {
-          labels: revenueLabels,
-          datasets: [
-            {
-              label: 'Recette (FCFA)',
-              data: revenueData,
-              borderColor: primary,
-              backgroundColor: gradient,
-              fill: true,
-              tension: 0.35,
-              pointRadius: 3,
-              pointBackgroundColor: primary,
-              pointBorderColor: '#0A0A0F',
-              pointBorderWidth: 1.5,
-              yAxisID: 'y',
-            },
-            {
-              label: 'Commandes',
-              data: ordersData,
-              borderColor: muted,
-              backgroundColor: 'transparent',
-              borderDash: [4, 4],
-              tension: 0.35,
-              pointRadius: 2,
-              pointBackgroundColor: muted,
-              yAxisID: 'y1',
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#1A1A22',
-              borderColor: '#2A2A35',
-              borderWidth: 1,
-              padding: 10,
-              titleFont: { weight: '700' },
-              callbacks: {
-                label: function(item) {
-                  if (item.dataset.yAxisID === 'y1') return ' ' + item.formattedValue + ' commande(s)';
-                  return ' ' + item.formattedValue + ' FCFA';
+    function hexToRgba(hex, alpha) {
+      const h = hex.replace('#', '');
+      const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+      const num = parseInt(full, 16);
+      if (Number.isNaN(num)) return `rgba(200,55,26,${alpha})`;
+      const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function renderCharts() {
+      const t = themeColors();
+      Chart.defaults.color = t.quiet;
+      Chart.defaults.font.family = "'Inter', sans-serif";
+      Chart.defaults.font.size = 11;
+      const gridColor = hexToRgba(t.border, 0.6);
+      const tooltipOpts = { backgroundColor: t.cardSoft, titleColor: t.fg, bodyColor: t.fg, borderColor: t.border, borderWidth: 1, padding: 10 };
+
+      revenueChart && revenueChart.destroy();
+      typeChart && typeChart.destroy();
+      categoryChart && categoryChart.destroy();
+
+      if (revenueCanvas) {
+        const ctx = revenueCanvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, hexToRgba(t.primary, 0.35));
+        gradient.addColorStop(1, hexToRgba(t.primary, 0));
+
+        revenueChart = new Chart(revenueCanvas, {
+          type: 'line',
+          data: {
+            labels: revenueLabels,
+            datasets: [
+              {
+                label: 'Recette (FCFA)',
+                data: revenueData,
+                borderColor: t.primary,
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3,
+                pointBackgroundColor: t.primary,
+                pointBorderColor: t.bg,
+                pointBorderWidth: 1.5,
+                yAxisID: 'y',
+              },
+              {
+                label: 'Commandes',
+                data: ordersData,
+                borderColor: t.quiet,
+                backgroundColor: 'transparent',
+                borderDash: [4, 4],
+                tension: 0.35,
+                pointRadius: 2,
+                pointBackgroundColor: t.quiet,
+                yAxisID: 'y1',
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                ...tooltipOpts,
+                titleFont: { weight: '700' },
+                callbacks: {
+                  label: function(item) {
+                    if (item.dataset.yAxisID === 'y1') return ' ' + item.formattedValue + ' commande(s)';
+                    return ' ' + item.formattedValue + ' FCFA';
+                  },
                 },
               },
             },
-          },
-          scales: {
-            x: { grid: { display: false }, ticks: { maxRotation: 0 } },
-            y: {
-              position: 'left', grid: { color: gridColor }, border: { display: false },
-              ticks: { callback: (v) => v >= 1000 ? (v / 1000) + 'k' : v },
+            scales: {
+              x: { grid: { display: false }, ticks: { maxRotation: 0 } },
+              y: {
+                position: 'left', grid: { color: gridColor }, border: { display: false },
+                ticks: { callback: (v) => v >= 1000 ? (v / 1000) + 'k' : v },
+              },
+              y1: {
+                position: 'right', grid: { display: false }, border: { display: false },
+                ticks: { precision: 0 }, beginAtZero: true,
+              },
             },
-            y1: {
-              position: 'right', grid: { display: false }, border: { display: false },
-              ticks: { precision: 0 }, beginAtZero: true,
+          },
+        });
+      }
+
+      if (typeCanvas) {
+        const hasData = typeData.some((v) => v > 0);
+        const total = typeData.reduce((a, b) => a + b, 0);
+
+        const totalEl = document.getElementById('chart-type-total');
+        const photoEl = document.getElementById('chart-type-photo');
+        const videoEl = document.getElementById('chart-type-video');
+        if (totalEl) totalEl.textContent = total;
+        if (photoEl) photoEl.textContent = typeData[0] || 0;
+        if (videoEl) videoEl.textContent = typeData[1] || 0;
+
+        typeChart = new Chart(typeCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: ['Photos', 'Vidéos'],
+            datasets: [{
+              data: hasData ? typeData : [1, 1],
+              backgroundColor: hasData ? [t.green, t.primary] : [t.border, t.cardSoft],
+              borderColor: t.card,
+              borderWidth: 3,
+              hoverOffset: 6,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '72%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { ...tooltipOpts, enabled: hasData },
             },
           },
-        },
-      });
+        });
+      }
+
+      if (categoryCanvas) {
+        categoryChart = new Chart(categoryCanvas, {
+          type: 'bar',
+          data: {
+            labels: categoryLabels.length ? categoryLabels : ['Aucune vente'],
+            datasets: [{
+              data: categoryLabels.length ? categoryData : [0],
+              backgroundColor: hexToRgba(t.primary, 0.15),
+              borderColor: t.primary,
+              borderWidth: 1.5,
+              borderRadius: 6,
+              maxBarThickness: 28,
+            }],
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                ...tooltipOpts,
+                callbacks: { label: (item) => ' ' + item.formattedValue + ' vente(s)' },
+              },
+            },
+            scales: {
+              x: { grid: { color: gridColor }, border: { display: false }, ticks: { precision: 0 } },
+              y: { grid: { display: false }, border: { display: false } },
+            },
+          },
+        });
+      }
     }
 
-    const typeCanvas = document.getElementById('chart-type');
-    if (typeCanvas) {
-      const typeData = {{ chart_type_data|default:"[0,0]"|safe }};
-      const hasData = typeData.some((v) => v > 0);
-      const total = typeData.reduce((a, b) => a + b, 0);
+    renderCharts();
 
-      const totalEl = document.getElementById('chart-type-total');
-      const photoEl = document.getElementById('chart-type-photo');
-      const videoEl = document.getElementById('chart-type-video');
-      if (totalEl) totalEl.textContent = total;
-      if (photoEl) photoEl.textContent = typeData[0] || 0;
-      if (videoEl) videoEl.textContent = typeData[1] || 0;
-
-      new Chart(typeCanvas, {
-        type: 'doughnut',
-        data: {
-          labels: ['Photos', 'Vidéos'],
-          datasets: [{
-            data: hasData ? typeData : [1, 1],
-            backgroundColor: hasData ? [green, primary] : ['#2A2A35', '#1A1A22'],
-            borderColor: '#14141A',
-            borderWidth: 3,
-            hoverOffset: 6,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '72%',
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              enabled: hasData,
-              backgroundColor: '#1A1A22', borderColor: '#2A2A35', borderWidth: 1, padding: 10,
-            },
-          },
-        },
-      });
-    }
-
-    const categoryCanvas = document.getElementById('chart-category');
-    if (categoryCanvas) {
-      const categoryLabels = {{ chart_category_labels|default:"[]"|safe }};
-      const categoryData = {{ chart_category_data|default:"[]"|safe }};
-      new Chart(categoryCanvas, {
-        type: 'bar',
-        data: {
-          labels: categoryLabels.length ? categoryLabels : ['Aucune vente'],
-          datasets: [{
-            data: categoryLabels.length ? categoryData : [0],
-            backgroundColor: primarySoft,
-            borderColor: primary,
-            borderWidth: 1.5,
-            borderRadius: 6,
-            maxBarThickness: 28,
-          }],
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#1A1A22', borderColor: '#2A2A35', borderWidth: 1, padding: 10,
-              callbacks: { label: (item) => ' ' + item.formattedValue + ' vente(s)' },
-            },
-          },
-          scales: {
-            x: { grid: { color: gridColor }, border: { display: false }, ticks: { precision: 0 } },
-            y: { grid: { display: false }, border: { display: false } },
-          },
-        },
-      });
-    }
+    /* Redessine les graphiques quand l'utilisateur bascule clair/sombre (bouton
+       natif Django, qui modifie l'attribut data-theme sur <html>), ou quand le
+       thème "auto" suit un changement de préférence système. */
+    new MutationObserver(renderCharts).observe(document.documentElement, {
+      attributes: true, attributeFilter: ['data-theme'],
+    });
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+      if (document.documentElement.dataset.theme === 'auto') renderCharts();
+    });
   });
 </script>
 {% endblock %}

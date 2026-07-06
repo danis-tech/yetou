@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django import forms
-from .models import Media, Purchase, PricingConfig, PaymentLog, PaygateSession, MediaLike, Category, Quality
+import json
+
+from .models import Media, Purchase, PricingConfig, PaymentLog, PaymentSession, MediaLike, Category, Quality
 from .serializers import _public_file_url
 
 PAID_STATUSES = Purchase.PAID_STATUSES
@@ -287,12 +289,23 @@ class PaymentLogAdmin(admin.ModelAdmin):
     search_fields = ("reference", "phone", "transaction_id")
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
-    readonly_fields = ("amount", "method", "reference", "phone", "status", "message", "transaction_id", "created_at")
+    readonly_fields = (
+        "amount", "method", "reference", "phone", "status", "message",
+        "transaction_id", "raw_payload_display", "created_at",
+    )
+    exclude = ("raw_payload",)
     list_per_page = 30
 
     @admin.display(description="Montant", ordering="amount")
     def amount_display(self, obj):
         return f"{obj.amount:,} FCFA".replace(",", " ")
+
+    @admin.display(description="Détails bruts du fournisseur")
+    def raw_payload_display(self, obj):
+        if not obj.raw_payload:
+            return "—"
+        pretty = json.dumps(obj.raw_payload, indent=2, ensure_ascii=False)
+        return format_html("<pre style='white-space:pre-wrap;max-width:640px'>{}</pre>", pretty)
 
     @admin.display(description="Statut", ordering="status")
     def status_badge(self, obj):
@@ -314,17 +327,40 @@ class PaymentLogAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(PaygateSession)
-class PaygateSessionAdmin(admin.ModelAdmin):
-    list_display = ("reference", "user", "method", "amount_fcfa", "amount_usd", "status", "created_at")
-    list_filter = ("method", "status")
+@admin.register(PaymentSession)
+class PaymentSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        "reference", "provider_badge", "user", "method", "amount_fcfa",
+        "amount_usd", "status_badge", "created_at",
+    )
+    list_filter = ("provider", "method", "status")
     search_fields = ("reference", "user__email")
     ordering = ("-created_at",)
     readonly_fields = (
-        "reference", "user", "media", "amount_fcfa", "amount_usd",
+        "reference", "provider", "user", "media", "amount_fcfa", "amount_usd",
         "method", "plan", "status", "purchase", "created_at",
     )
     list_per_page = 30
+
+    @admin.display(description="Fournisseur", ordering="provider")
+    def provider_badge(self, obj):
+        colors = {"fedapay": "#7c3aed", "singpay": "#0ea5e9"}
+        color = colors.get(obj.provider, "#8A8A95")
+        return format_html(
+            '<span style="background:{}20;color:{};padding:3px 10px;border-radius:8px;'
+            'font-size:10px;font-weight:700">{}</span>',
+            color, color, obj.get_provider_display(),
+        )
+
+    @admin.display(description="Statut", ordering="status")
+    def status_badge(self, obj):
+        colors = {"success": "#22c55e", "failed": "#C8371A", "pending": "#8A8A95"}
+        color = colors.get(obj.status, "#8A8A95")
+        return format_html(
+            '<span style="background:{}20;color:{};padding:3px 10px;border-radius:8px;'
+            'font-size:10px;font-weight:700">{}</span>',
+            color, color, obj.get_status_display(),
+        )
 
     def has_add_permission(self, request):
         return False

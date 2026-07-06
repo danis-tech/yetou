@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from django.db.models import Count, Exists, OuterRef
 from django.shortcuts import get_object_or_404
 from django.conf import settings
-from .models import Media, MediaLike, Purchase, PaymentLog, PaygateSession, PricingConfig, Quality
+from .models import Media, MediaLike, Purchase, PaymentLog, PaymentSession, PricingConfig, Quality
 from .filters import apply_media_filters, apply_media_order
 from .pagination import MediaPagination
 from .fedapay import (
@@ -111,6 +111,15 @@ class PurchaseViewSet(viewsets.ModelViewSet):
 
         media = get_object_or_404(Media, id=serializer.validated_data["media_id"], status="published")
         user = request.user
+
+        payment_reference = serializer.validated_data.get("payment_reference", "")
+        if payment_reference:
+            # Idempotence : si le webhook (ou un appel précédent) a déjà créé l'achat
+            # pour cette référence, on le renvoie tel quel au lieu d'en recréer un.
+            existing = Purchase.objects.filter(user=user, payment_reference=payment_reference).first()
+            if existing:
+                return Response(PurchaseSerializer(existing).data, status=200)
+
         max_dl = PLAN_DOWNLOADS.get(user.plan, 1)
         if max_dl == -1:
             max_dl = 999
@@ -314,21 +323,41 @@ def singpay_webhook(request):
         reference, singpay_status, transaction_id, tx_result, api_message,
     )
 
+    # SingPay indique le vrai moyen utilisé (le client peut choisir Airtel, Moov
+    # ou PayPal sur leur page hébergée, indépendamment de ce qu'on a présélectionné).
+    method_map = {"airtel": "Airtel Money", "moov": "Moov Money", "paypal": "PayPal"}
+    real_method = method_map.get(str(transaction.get("type", "")).strip().lower())
+
     # ── Mettre à jour le PaymentLog si il existe ───────────────────────
     log_status = {"SUCCESS": "success", "FAILED": "failed"}.get(singpay_status, "pending")
-    PaymentLog.objects.filter(reference=reference).update(
-        status=log_status,
-        transaction_id=transaction_id or PaymentLog.objects.filter(
+    update_fields = {
+        "status": log_status,
+        "transaction_id": transaction_id or PaymentLog.objects.filter(
             reference=reference,
         ).values_list("transaction_id", flat=True).first() or "",
-        message=f"Webhook SingPay: {singpay_status} — {api_message}"[:500],
-    )
+        "message": f"Webhook SingPay: {singpay_status} — {api_message}"[:500],
+        "raw_payload": data if hasattr(data, "keys") else None,
+    }
+    if real_method:
+        update_fields["method"] = real_method
+    PaymentLog.objects.filter(reference=reference).update(**update_fields)
 
-    # ── Si succès et qu'aucun achat n'a encore été créé ────────────────
-    # (cas où le frontend n'a pas pu appeler /api/purchases/ après le paiement)
-    # ── Activer les achats en attente liés à cette référence ─────────
-    if reference:
-        from media_app.models import Purchase
+    # ── Session de paiement mobile (créée par /api/payments/singpay/initiate/) ──
+    # C'est le chemin fiable : user + média/plan connus dès l'initiation.
+    session = (
+        PaymentSession.objects.filter(reference=reference, provider="singpay")
+        .select_related("user", "media")
+        .first()
+    ) if reference else None
+
+    if session and singpay_status == "SUCCESS":
+        _complete_payment_session(session, transaction_id, f"Webhook SingPay: {api_message}"[:500])
+    elif session and singpay_status == "FAILED":
+        session.status = "failed"
+        session.save(update_fields=["status"])
+
+    # ── Filet de sécurité pour les achats créés sans session (legacy / hors-ligne) ──
+    if reference and not session:
         from users_app.notifications import notify_purchase
 
         if singpay_status == "SUCCESS":
@@ -350,20 +379,11 @@ def singpay_webhook(request):
                 purchase.save(update_fields=["payment_status"])
                 notify_purchase(purchase.user, purchase)
 
-    if singpay_status == "SUCCESS" and reference:
-        # On ne peut pas identifier l'utilisateur sans le lier à la référence
-        # Ce bloc est un filet de sécurité — à améliorer en stockant
-        # (reference → user_id + media_id) dans PaymentLog lors de l'initiation.
-        logger.info(
-            "SingPay webhook SUCCESS: ref=%s montant=%s phone=%s",
-            reference, amount, phone,
-        )
-
     return Response({"received": True}, status=200)
 
 
-def _complete_card_session(session: PaygateSession, transaction_id: str = "", log_message: str = "") -> None:
-    """Finalise achat ou abonnement après paiement carte confirmé."""
+def _complete_payment_session(session: PaymentSession, transaction_id: str = "", log_message: str = "") -> None:
+    """Finalise achat ou abonnement après paiement (carte ou mobile) confirmé."""
     if session.status == "success":
         return
 
@@ -372,31 +392,38 @@ def _complete_card_session(session: PaygateSession, transaction_id: str = "", lo
 
     PaymentLog.objects.filter(reference=session.reference).update(
         status="success",
-        message=log_message or "Paiement carte confirmé",
+        message=log_message or "Paiement confirmé",
         transaction_id=transaction_id or "",
     )
 
     user = session.user
 
     if session.media_id:
-        max_dl = PLAN_DOWNLOADS.get(user.plan, 1)
-        if max_dl == -1:
-            max_dl = 999
+        # Idempotence : le frontend peut avoir déjà créé l'achat (retour client)
+        # avant l'arrivée du webhook (ou inversement) — on ne le duplique pas.
+        purchase = Purchase.objects.filter(user=user, payment_reference=session.reference).first()
+        if not purchase:
+            max_dl = PLAN_DOWNLOADS.get(user.plan, 1)
+            if max_dl == -1:
+                max_dl = 999
 
-        purchase = Purchase.objects.create(
-            user=user,
-            media=session.media,
-            price=session.amount_fcfa,
-            max_downloads=max_dl,
-            payment_method=session.method,
-            payment_reference=session.reference,
-            payment_status="success",
-        )
+            purchase = Purchase.objects.create(
+                user=user,
+                media=session.media,
+                price=session.amount_fcfa,
+                max_downloads=max_dl,
+                payment_method=session.method,
+                payment_reference=session.reference,
+                payment_status="success",
+            )
+            from users_app.notifications import notify_purchase
+            notify_purchase(user, purchase)
+        elif purchase.payment_status != "success":
+            purchase.payment_status = "success"
+            purchase.save(update_fields=["payment_status"])
+
         session.purchase = purchase
         session.save(update_fields=["purchase"])
-
-        from users_app.notifications import notify_purchase
-        notify_purchase(user, purchase)
 
     elif session.plan in ("monthly", "pro"):
         old_plan = user.plan
@@ -464,8 +491,9 @@ def fedapay_initiate(request):
     amount_usd = fcfa_to_usd(amount_fcfa)
     description = media.title if media else f"Abonnement yétou ({plan})"
 
-    session = PaygateSession.objects.create(
+    session = PaymentSession.objects.create(
         reference=order_id,
+        provider="fedapay",
         user=request.user,
         media=media,
         amount_fcfa=amount_fcfa,
@@ -524,7 +552,7 @@ def fedapay_confirm(request):
         return Response({"error": "reference et transaction_id requis."}, status=400)
 
     session = (
-        PaygateSession.objects.filter(reference=reference, user=request.user)
+        PaymentSession.objects.filter(reference=reference, user=request.user, provider="fedapay")
         .select_related("user", "media")
         .first()
     )
@@ -545,5 +573,64 @@ def fedapay_confirm(request):
             status=400,
         )
 
-    _complete_card_session(session, transaction_id)
+    _complete_payment_session(session, transaction_id, "Paiement carte confirmé")
     return Response({"status": "success", "reference": reference})
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def singpay_initiate(request):
+    """
+    Crée une session de paiement mobile/PayPal (SingPay) côté serveur, avant
+    redirection. Le montant est recalculé côté serveur à partir du média (jamais
+    fait confiance au montant envoyé par le client), comme pour FedaPay.
+
+    Corps : { media_id?, amount_fcfa?, method: "Airtel Money"|"Moov Money", plan? }
+    Réponse : { reference, amount_fcfa }
+    """
+    method = str(request.data.get("method", "")).strip()
+    if method not in ("Airtel Money", "Moov Money"):
+        return Response({"error": "Méthode invalide. Utilisez Airtel Money ou Moov Money."}, status=400)
+
+    plan = str(request.data.get("plan", "")).strip()
+    if plan and plan not in ("monthly", "pro"):
+        return Response({"error": "Plan invalide."}, status=400)
+
+    media_id = request.data.get("media_id")
+    media = None
+    amount_fcfa = request.data.get("amount_fcfa")
+
+    if media_id:
+        media = get_object_or_404(Media, id=media_id, status="published")
+        amount_fcfa = media.price
+    else:
+        try:
+            amount_fcfa = int(amount_fcfa)
+        except (TypeError, ValueError):
+            return Response({"error": "Montant invalide."}, status=400)
+        if amount_fcfa < 500:
+            return Response({"error": "Le montant minimum est de 500 FCFA."}, status=400)
+
+    if not media_id and not plan:
+        return Response({"error": "media_id ou plan requis."}, status=400)
+
+    order_id = f"YETOU-SP-{request.user.id}-{int(time.time() * 1000)}"
+
+    PaymentSession.objects.create(
+        reference=order_id,
+        provider="singpay",
+        user=request.user,
+        media=media,
+        amount_fcfa=amount_fcfa,
+        method=method,
+        plan=plan,
+    )
+    PaymentLog.objects.create(
+        amount=amount_fcfa,
+        method=method,
+        reference=order_id,
+        status="pending",
+        message="SingPay initié",
+    )
+
+    return Response({"reference": order_id, "amount_fcfa": amount_fcfa})

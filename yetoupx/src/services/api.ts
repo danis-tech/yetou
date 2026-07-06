@@ -433,6 +433,39 @@ export async function confirmFedapayPayment(data: {
   return { ok: true };
 }
 
+export interface SingpayInitiateResult {
+  reference: string;
+  amount_fcfa: number;
+}
+
+/**
+ * Crée la session de paiement mobile/PayPal côté serveur (montant recalculé à
+ * partir du média, jamais fait confiance au montant envoyé par le client),
+ * avant d'appeler SingPay. Nécessite d'être connecté.
+ */
+export async function initiateSingpayPayment(data: {
+  media_id?: number | null;
+  amount_fcfa: number;
+  method: string;
+  plan?: string;
+}): Promise<{ ok: true; data: SingpayInitiateResult } | { ok: false; error: string }> {
+  const res = await authFetch("/payments/singpay/initiate/", {
+    method: "POST",
+    body: JSON.stringify({
+      media_id: data.media_id ?? null,
+      amount_fcfa: data.amount_fcfa,
+      method: data.method,
+      plan: data.plan || "",
+    }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = body as { error?: string; message?: string };
+    return { ok: false, error: err.error || err.message || "Erreur paiement mobile." };
+  }
+  return { ok: true, data: body as SingpayInitiateResult };
+}
+
 export async function checkPaymentStatus(
   reference: string,
 ): Promise<{ status: "success" | "failed" | "pending" | "unknown"; message: string }> {

@@ -265,6 +265,7 @@ class PaymentLog(models.Model):
     METHOD_CHOICES = [
         ("Airtel Money", "Airtel Money"),
         ("Moov Money", "Moov Money"),
+        ("PayPal", "PayPal"),
         ("Visa", "Visa"),
         ("Mastercard", "Mastercard"),
     ]
@@ -276,6 +277,8 @@ class PaymentLog(models.Model):
     status = models.CharField("Statut", max_length=15, choices=STATUS_CHOICES, default="success")
     message = models.TextField("Message", blank=True)
     transaction_id = models.CharField("ID Transaction", max_length=255, blank=True)
+    raw_payload = models.JSONField("Détails bruts (webhook)", null=True, blank=True,
+        help_text="Payload brut renvoyé par le fournisseur de paiement (SingPay/FedaPay), conservé pour audit.")
     created_at = models.DateTimeField("Date", auto_now_add=True)
 
     class Meta:
@@ -287,30 +290,39 @@ class PaymentLog(models.Model):
         return f"{self.get_method_display()} · {self.amount:,} FCFA · {self.get_status_display()}".replace(",", " ")
 
 
-class PaygateSession(models.Model):
-    """Session de paiement carte (FedaPay / Visa / Mastercard)."""
+class PaymentSession(models.Model):
+    """Session de paiement (carte via FedaPay, ou mobile money / PayPal via SingPay).
+
+    Créée côté serveur dès l'initiation (avant redirection vers le fournisseur), pour
+    garder le lien user + média/plan + montant quel que soit le moyen de paiement.
+    """
 
     STATUS_CHOICES = [
         ("pending", "En attente"),
         ("success", "Réussi"),
         ("failed", "Échoué"),
     ]
+    PROVIDER_CHOICES = [
+        ("fedapay", "FedaPay (carte)"),
+        ("singpay", "SingPay (mobile / PayPal)"),
+    ]
 
     reference = models.CharField("Référence commande", max_length=255, unique=True)
+    provider = models.CharField("Fournisseur", max_length=20, choices=PROVIDER_CHOICES, default="fedapay")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="paygate_sessions",
+        related_name="payment_sessions",
     )
     media = models.ForeignKey(
         Media,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="paygate_sessions",
+        related_name="payment_sessions",
     )
     amount_fcfa = models.PositiveIntegerField("Montant (FCFA)")
-    amount_usd = models.DecimalField("Montant (USD)", max_digits=10, decimal_places=2)
+    amount_usd = models.DecimalField("Montant (USD)", max_digits=10, decimal_places=2, null=True, blank=True)
     method = models.CharField("Méthode", max_length=20, choices=PaymentLog.METHOD_CHOICES)
     plan = models.CharField("Plan abonnement", max_length=20, blank=True, default="")
     status = models.CharField("Statut", max_length=15, choices=STATUS_CHOICES, default="pending")
@@ -319,14 +331,14 @@ class PaygateSession(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="paygate_sessions",
+        related_name="payment_sessions",
     )
     created_at = models.DateTimeField("Créé le", auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
-        verbose_name = "Session PayGate"
-        verbose_name_plural = "Sessions PayGate"
+        verbose_name = "Session de paiement"
+        verbose_name_plural = "Sessions de paiement"
 
     def __str__(self):
         return f"{self.reference} · {self.get_status_display()}"

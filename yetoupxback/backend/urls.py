@@ -12,6 +12,7 @@ from media_app.views import (
     fedapay_confirm,
     card_payment_status,
     payment_status_check,
+    singpay_initiate,
 )
 from users_app.views import (
     profile,
@@ -45,5 +46,6 @@ urlpatterns = [
     path("api/payments/fedapay/confirm/", fedapay_confirm, name="fedapay-confirm"),
     path("api/payments/card/status/", card_payment_status, name="card-payment-status"),
     path("api/payments/status/", payment_status_check, name="payment-status-check"),
+    path("api/payments/singpay/initiate/", singpay_initiate, name="singpay-initiate"),
     path("api/", include(router.urls)),
 ]

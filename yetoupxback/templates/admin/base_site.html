@@ -95,51 +95,222 @@
   });
 </script>
 <style>
-  /* !important sur chaque variable : empêche le sélecteur de thème natif de Django
-     (html[data-theme="light"], plus spécifique que :root) de reprendre la main
-     avec des couleurs claires si le thème OS/utilisateur est en mode clair. */
-  :root, html[data-theme="light"], html[data-theme="dark"], html[data-theme="auto"] {
-    --primary: #C8371A !important;
-    --primary-dark: #A52D16 !important;
-    --body-bg: #0A0A0F !important;
-    --body-fg: #F0EFEA !important;
-    --body-quiet-color: #8A8A95 !important;
-    --darkened-bg: #14141A !important;
-    --selected-bg: rgba(200,55,26,0.15) !important;
-    --selected-row: rgba(200,55,26,0.08) !important;
-    --link-fg: #C8371A !important;
-    --link-hover-color: #e04528 !important;
-    --link-selected-fg: #e04528 !important;
-    --breadcrumbs-bg: #14141A !important;
-    --breadcrumbs-fg: #C8371A !important;
-    --header-bg: #050508 !important;
-    --header-color: #F0EFEA !important;
-    --button-bg: #C8371A !important;
-    --button-hover-bg: #A52D16 !important;
-    --button-fg: #fff !important;
-    --default-button-bg: #C8371A !important;
-    --default-button-hover-bg: #A52D16 !important;
-    --close-button-bg: #2A2A35 !important;
-    --close-button-hover-bg: #3A3A45 !important;
-    --delete-button-bg: #C8371A !important;
-    --delete-button-hover-bg: #A52D16 !important;
-    --object-tools-bg: #14141A !important;
-    --object-tools-hover-bg: #1A1A25 !important;
-    --border-color: #2A2A35 !important;
-    --hairline-color: #2A2A35 !important;
-    --input-bg: #0A0A0F !important;
-    --input-fg: #F0EFEA !important;
-    --input-border: #2A2A35 !important;
-    --message-success-bg: rgba(34,197,94,0.1) !important;
-    --message-warning-bg: rgba(255,179,0,0.1) !important;
-    --message-error-bg: rgba(200,55,26,0.1) !important;
-    --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    --font-family-monospace: 'Fira Code', 'Consolas', monospace !important;
-    --header-height: 50px !important;
-    --header-logo-color: #F0EFEA !important;
+  /* ═══════════════════════════════════════════════════════════════════════
+     THÈME CLAIR / SOMBRE
+     Django 6 gère nativement 3 états sur <html data-theme="dark|light|auto">
+     (bouton en haut à droite, persisté en localStorage). On définit ici DEUX
+     palettes complètes de marque Yétou (sombre = défaut, claire = alternative)
+     en redéfinissant TOUTES les variables CSS utilisées par l'admin natif
+     (base.css / dark_mode.css / forms.css / widgets.css), pour qu'aucune
+     couleur par défaut de Django (bleu/jaune Django) ne puisse transparaître
+     et jurer avec l'identité Yétou, quel que soit le mode choisi.
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  :root {
+    /* Constantes indépendantes du thème */
+    --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-family-monospace: 'Fira Code', 'Consolas', monospace;
+    --header-height: 50px;
+    --primary: #C8371A;
+    --primary-dark: #A52D16;
+    --primary-fg: #ffffff;
+    --secondary: #A52D16;
+    --accent: #F5C77E;
+    --button-bg: #C8371A;
+    --button-hover-bg: #A52D16;
+    --button-fg: #ffffff;
+    --default-button-bg: #C8371A;
+    --default-button-hover-bg: #A52D16;
+    --delete-button-bg: #C8371A;
+    --delete-button-hover-bg: #A52D16;
   }
 
-  body { font-family: var(--font-family-primary); font-size: 13px; }
+  /* ── Sombre (par défaut, et mode explicite "dark") ── */
+  :root, html[data-theme="dark"] {
+    --body-bg: #0A0A0F;
+    --body-fg: #F0EFEA;
+    --body-quiet-color: #8A8A95;
+    --body-medium-color: #C7C6C9;
+    --body-loud-color: #ffffff;
+    --darkened-bg: #14141A;
+    --selected-bg: rgba(200,55,26,0.15);
+    --selected-row: rgba(200,55,26,0.08);
+    --link-fg: #C8371A;
+    --link-hover-color: #e04528;
+    --link-selected-fg: #e04528;
+    --breadcrumbs-bg: #14141A;
+    --breadcrumbs-fg: #C8371A;
+    --breadcrumbs-link-fg: #8A8A95;
+    --header-bg: #050508;
+    --header-color: #F0EFEA;
+    --header-link-color: #F0EFEA;
+    --header-branding-color: #F0EFEA;
+    --header-logo-color: #F0EFEA;
+    --close-button-bg: #2A2A35;
+    --close-button-hover-bg: #3A3A45;
+    --object-tools-bg: #14141A;
+    --object-tools-hover-bg: #1A1A25;
+    --object-tools-fg: #F0EFEA;
+    --border-color: #2A2A35;
+    --hairline-color: #2A2A35;
+    --input-bg: #0A0A0F;
+    --input-fg: #F0EFEA;
+    --input-border: #2A2A35;
+    --error-fg: #FF6B6B;
+    --message-success-bg: rgba(34,197,94,0.14);
+    --message-warning-bg: rgba(255,179,0,0.14);
+    --message-error-bg: rgba(200,55,26,0.14);
+    --message-info-bg: rgba(58,146,255,0.16);
+    --message-debug-bg: #1A1A22;
+    --card-bg: #14141A;
+    --card-bg-soft: #1A1A22;
+    --shadow-color: rgba(0,0,0,0.45);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    html[data-theme="auto"] {
+      --body-bg: #0A0A0F;
+      --body-fg: #F0EFEA;
+      --body-quiet-color: #8A8A95;
+      --body-medium-color: #C7C6C9;
+      --body-loud-color: #ffffff;
+      --darkened-bg: #14141A;
+      --selected-bg: rgba(200,55,26,0.15);
+      --selected-row: rgba(200,55,26,0.08);
+      --link-fg: #C8371A;
+      --link-hover-color: #e04528;
+      --link-selected-fg: #e04528;
+      --breadcrumbs-bg: #14141A;
+      --breadcrumbs-fg: #C8371A;
+      --breadcrumbs-link-fg: #8A8A95;
+      --header-bg: #050508;
+      --header-color: #F0EFEA;
+      --header-link-color: #F0EFEA;
+      --header-branding-color: #F0EFEA;
+      --header-logo-color: #F0EFEA;
+      --close-button-bg: #2A2A35;
+      --close-button-hover-bg: #3A3A45;
+      --object-tools-bg: #14141A;
+      --object-tools-hover-bg: #1A1A25;
+      --object-tools-fg: #F0EFEA;
+      --border-color: #2A2A35;
+      --hairline-color: #2A2A35;
+      --input-bg: #0A0A0F;
+      --input-fg: #F0EFEA;
+      --input-border: #2A2A35;
+      --error-fg: #FF6B6B;
+      --message-success-bg: rgba(34,197,94,0.14);
+      --message-warning-bg: rgba(255,179,0,0.14);
+      --message-error-bg: rgba(200,55,26,0.14);
+      --message-info-bg: rgba(58,146,255,0.16);
+      --message-debug-bg: #1A1A22;
+      --card-bg: #14141A;
+      --card-bg-soft: #1A1A22;
+      --shadow-color: rgba(0,0,0,0.45);
+      color-scheme: dark;
+    }
+  }
+
+  /* ── Clair (mode explicite "light") ── */
+  html[data-theme="light"] {
+    --body-bg: #F3F1EC;
+    --body-fg: #1B1A1D;
+    --body-quiet-color: #6D6B72;
+    --body-medium-color: #45434A;
+    --body-loud-color: #0A0A0F;
+    --darkened-bg: #FFFFFF;
+    --selected-bg: rgba(200,55,26,0.08);
+    --selected-row: rgba(200,55,26,0.05);
+    --link-fg: #C8371A;
+    --link-hover-color: #A52D16;
+    --link-selected-fg: #A52D16;
+    --breadcrumbs-bg: #FFFFFF;
+    --breadcrumbs-fg: #A52D16;
+    --breadcrumbs-link-fg: #6D6B72;
+    --header-bg: #FFFFFF;
+    --header-color: #1B1A1D;
+    --header-link-color: #1B1A1D;
+    --header-branding-color: #1B1A1D;
+    --header-logo-color: #1B1A1D;
+    --close-button-bg: #E7E4DD;
+    --close-button-hover-bg: #DAD6CC;
+    --object-tools-bg: #FFFFFF;
+    --object-tools-hover-bg: #F3F1EC;
+    --object-tools-fg: #1B1A1D;
+    --border-color: #E3E0D8;
+    --hairline-color: #EBE8E1;
+    --input-bg: #FFFFFF;
+    --input-fg: #1B1A1D;
+    --input-border: #DAD6CC;
+    --error-fg: #C0261B;
+    --message-success-bg: rgba(34,197,94,0.12);
+    --message-warning-bg: rgba(245,158,11,0.16);
+    --message-error-bg: rgba(200,55,26,0.10);
+    --message-info-bg: rgba(37,99,235,0.10);
+    --message-debug-bg: #EDEBE4;
+    --card-bg: #FFFFFF;
+    --card-bg-soft: #F7F5F0;
+    --shadow-color: rgba(20,15,10,0.08);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: light) {
+    html[data-theme="auto"] {
+      --body-bg: #F3F1EC;
+      --body-fg: #1B1A1D;
+      --body-quiet-color: #6D6B72;
+      --body-medium-color: #45434A;
+      --body-loud-color: #0A0A0F;
+      --darkened-bg: #FFFFFF;
+      --selected-bg: rgba(200,55,26,0.08);
+      --selected-row: rgba(200,55,26,0.05);
+      --link-fg: #C8371A;
+      --link-hover-color: #A52D16;
+      --link-selected-fg: #A52D16;
+      --breadcrumbs-bg: #FFFFFF;
+      --breadcrumbs-fg: #A52D16;
+      --breadcrumbs-link-fg: #6D6B72;
+      --header-bg: #FFFFFF;
+      --header-color: #1B1A1D;
+      --header-link-color: #1B1A1D;
+      --header-branding-color: #1B1A1D;
+      --header-logo-color: #1B1A1D;
+      --close-button-bg: #E7E4DD;
+      --close-button-hover-bg: #DAD6CC;
+      --object-tools-bg: #FFFFFF;
+      --object-tools-hover-bg: #F3F1EC;
+      --object-tools-fg: #1B1A1D;
+      --border-color: #E3E0D8;
+      --hairline-color: #EBE8E1;
+      --input-bg: #FFFFFF;
+      --input-fg: #1B1A1D;
+      --input-border: #DAD6CC;
+      --error-fg: #C0261B;
+      --message-success-bg: rgba(34,197,94,0.12);
+      --message-warning-bg: rgba(245,158,11,0.16);
+      --message-error-bg: rgba(200,55,26,0.10);
+      --message-info-bg: rgba(37,99,235,0.10);
+      --message-debug-bg: #EDEBE4;
+      --card-bg: #FFFFFF;
+      --card-bg-soft: #F7F5F0;
+      --shadow-color: rgba(20,15,10,0.08);
+      color-scheme: light;
+    }
+  }
+
+  /* Corrections ponctuelles : certains composants natifs Django réutilisent
+     une variable (ex. --header-link-color) à la fois pour le texte du header
+     ET pour du texte blanc sur un fond orange (--primary) ; on force donc le
+     blanc explicitement là où le fond reste toujours orange/marque, quel que
+     soit le thème. */
+  .object-tools a.addlink,
+  .selector-chosen-title, .selector-chosen-title label,
+  .selector-chosen .list-footer-display {
+    color: #fff !important;
+  }
+  .calendar table { background: var(--body-bg); }
+  .calendarbox, .clockbox { box-shadow: 0 12px 32px var(--shadow-color); }
+
+  body { font-family: var(--font-family-primary); font-size: 13px; transition: background-color .15s, color .15s; }
   body.login { background: #0A0A0F !important; }
 
   #header {
@@ -440,18 +611,18 @@
 
   /* Info tooltip */
   .field-info-tip {
-    color: #8A8A95; font-size: 13px; cursor: help; margin-left: 4px;
+    color: var(--body-quiet-color); font-size: 13px; cursor: help; margin-left: 4px;
     position: relative; display: inline-block; transition: color .15s;
   }
-  .field-info-tip:hover { color: #C8371A; }
+  .field-info-tip:hover { color: var(--primary); }
   .field-info-tip:hover::after {
     content: attr(data-tip);
     position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-    background: #14141A; color: #F0EFEA; border: 1px solid #2A2A35;
+    background: var(--card-bg); color: var(--body-fg); border: 1px solid var(--border-color);
     padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 400;
     white-space: normal; max-width: 360px; width: max-content;
     z-index: 9999; line-height: 1.5;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5); text-align: left;
+    box-shadow: 0 8px 30px var(--shadow-color); text-align: left;
     pointer-events: none;
   }
 

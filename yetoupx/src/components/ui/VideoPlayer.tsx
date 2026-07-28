@@ -306,9 +306,9 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
           <span style={{
             fontFamily: "Sora, sans-serif", fontSize: "10px", fontWeight: 700,
             color: "rgba(255,255,255,0.25)", letterSpacing: "2px",
-            textTransform: "lowercase", userSelect: "none",
+            userSelect: "none",
           }}>
-            yétou
+            Gabon Pixel
           </span>
         </div>
       </div>
@@ -322,7 +322,7 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
       }}>
         <i className="ti ti-shield-lock" style={{ fontSize: "10px", color: "#8A8A95" }}></i>
         <span style={{ fontSize: "9px", color: "#8A8A95" }}>
-          Lecture autorisée · Téléchargement protégé par yétou
+          Lecture autorisée · Téléchargement protégé par Gabon Pixel
         </span>
       </div>
     </div>

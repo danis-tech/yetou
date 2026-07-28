@@ -14,7 +14,7 @@ export default function Footer({ onSwitchTab, onSetPhotoCat, onOpenAuth }: Foote
       <div className="footer-grid">
         <div>
           <div className="footer-logo">
-            yé<em>tou</em>
+            Gabon <em>Pixel</em>
           </div>
           <p className="footer-desc">
             Plateforme de vente de médias aériens HD &amp; 4K,<br />
@@ -50,7 +50,7 @@ export default function Footer({ onSwitchTab, onSetPhotoCat, onOpenAuth }: Foote
       </div>
       <div className="footer-bottom">
         <span>© 2026 Best Aero Drone · Tous droits réservés · Gabon</span>
-        <span>yétou — Plateforme de médias aériens HD</span>
+        <span>Gabon Pixel — Plateforme de médias aériens HD</span>
       </div>
     </footer>
   );

@@ -21,14 +21,31 @@ export default function DownloadsModal({ open, items, onClose, onDownload, remai
     setDownloadingId(item.id);
     try {
       const url = await onDownload(item);
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.download = "";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const ext = item.type === "video" ? "mp4" : "jpg";
+      const cleanName = (item.name || "media").replace(/[^a-zA-Z0-9_\-]/g, "_");
+      const filename = `${cleanName}_${item.id}.${ext}`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Réponse réseau non OK");
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      } catch {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (e) {
       onError?.(e instanceof Error ? e.message : "Erreur de téléchargement.");
     } finally {

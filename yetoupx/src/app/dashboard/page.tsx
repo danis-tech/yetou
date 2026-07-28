@@ -168,7 +168,7 @@ export default function DashboardPage() {
   }, [buyItem, activePayMethod, checkout, showToast, loadDashboardSummary, refreshPurchases]);
 
   const longPressCaptureToast = useCallback(() => {
-    showToast("Capture interdite. Ce média est protégé par yétou.", true);
+    showToast("Capture interdite. Ce média est protégé par Gabon Pixel.", true);
   }, [showToast]);
 
   const { toggleLike, loadingId: likeLoadingId } = useMediaLikes(
@@ -344,7 +344,7 @@ function Sidebar({ user, plan, activeTab, purchasesCount, open, onSelectTab, onL
   return (
     <nav className={`dash-sidebar ${open ? "open" : ""}`}>
       <div className="dash-sidebar-logo" onClick={() => router.push("/")} title="Retour au site principal">
-        yé<em>tou</em>
+        Gabon <em>Pixel</em>
         <span>Espace client</span>
       </div>
       <button type="button" className="dash-sidebar-back-site" onClick={() => router.push("/")}>
@@ -396,14 +396,31 @@ function PurchasesTab({ purchases, loading, router, onDownload, remainingDownloa
     setDownloadingId(item.id);
     try {
       const url = await onDownload(item);
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.download = "";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const ext = item.type === "video" ? "mp4" : "jpg";
+      const cleanName = (item.name || "media").replace(/[^a-zA-Z0-9_\-]/g, "_");
+      const filename = `${cleanName}_${item.id}.${ext}`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Réponse réseau non OK");
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      } catch {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (e) {
       onError(e instanceof Error ? e.message : "Erreur de téléchargement.");
     } finally {

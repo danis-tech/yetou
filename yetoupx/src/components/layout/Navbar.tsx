@@ -56,7 +56,7 @@ export default function Navbar({
     <>
       <nav className="navbar">
         <div className="logo">
-          yé<em>tou</em>
+          Gabon <em>Pixel</em>
           <span>by Best Aero Drone · Gabon</span>
         </div>
 

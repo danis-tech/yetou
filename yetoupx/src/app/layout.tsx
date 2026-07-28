@@ -3,7 +3,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "yétou — Médias aériens HD & 4K · Gabon",
+  title: "Gabon Pixel — Médias aériens HD & 4K · Gabon",
   description:
     "Plateforme de vente de médias aériens HD & 4K — paysages, culture, nature et événements gabonais capturés par drone professionnel. Développée par Best Aero Drone · Libreville, Gabon.",
   keywords:

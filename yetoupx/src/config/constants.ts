@@ -1,5 +1,5 @@
 export const APP = {
-  name: "yétou",
+  name: "Gabon Pixel",
   version: "1.0.0",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 } as const;

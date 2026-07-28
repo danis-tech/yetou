@@ -47,7 +47,7 @@ export default function HomePage() {
   const { checkout, loading: payLoading } = usePayment();
 
   const longPressCaptureToast = useCallback(() => {
-    showToast("Capture interdite. Ce média est protégé par yétou.", true);
+    showToast("Capture interdite. Ce média est protégé par Gabon Pixel.", true);
   }, [showToast]);
 
   useLongPressGuard(longPressCaptureToast);

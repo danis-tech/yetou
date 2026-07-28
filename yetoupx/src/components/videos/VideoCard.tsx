@@ -103,7 +103,7 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture, onToggl
               onContextMenu={(e) => e.preventDefault()}
             />
           )}
-          <div className="watermark-sm">yétou</div>
+          <div className="watermark-sm">Gabon Pixel</div>
           <div className="video-play"><i className="ti ti-player-play"></i></div>
           <div className="video-res">{video.vres}</div>
           <div className="video-dur">{video.duration}</div>

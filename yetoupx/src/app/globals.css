@@ -33,8 +33,8 @@ a { text-decoration: none; color: inherit; }
   pointer-events: none; z-index: 10;
 }
 .watermark-overlay::after {
-  content: 'yétou'; font-family: 'Sora', sans-serif; font-size: 2.5rem; font-weight: 700;
-  color: rgba(255,255,255,0.12); text-transform: lowercase; letter-spacing: 0.3em;
+  content: 'Gabon Pixel'; font-family: 'Sora', sans-serif; font-size: 2.5rem; font-weight: 700;
+  color: rgba(255,255,255,0.12); letter-spacing: 0.2em;
   transform: rotate(-15deg); text-shadow: 0 0 20px rgba(0,0,0,0.3);
 }
 .watermark-sm {
@@ -274,7 +274,7 @@ a { text-decoration: none; color: inherit; }
 .photo-item {
   position: relative; cursor: pointer;
   background: linear-gradient(160deg, #18181f 0%, #111118 100%);
-  border: 1px solid #262633; border-radius: 12px; overflow: visible;
+  border: 1px solid #262633; border-radius: 0; overflow: visible;
   transition: transform 0.45s cubic-bezier(.15,.67,.38,1), box-shadow 0.45s, border-color 0.35s, z-index 0s 0s;
   z-index: 1;
   opacity: 0; animation: fadeUpIn 0.6s cubic-bezier(.25,.8,.25,1) forwards;
@@ -290,7 +290,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 .photo-inner {
-  border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  border-radius: 0; overflow: hidden; display: flex; flex-direction: column;
   position: relative;
 }
 .photo-inner .photo-img {
@@ -329,7 +329,7 @@ a { text-decoration: none; color: inherit; }
     rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.05) 70%, transparent 100%);
   opacity: 0; transition: opacity 0.35s ease;
   display: flex; flex-direction: column; justify-content: flex-end; padding: 14px;
-  border-radius: 12px;
+  border-radius: 0;
 }
 .photo-item:hover .photo-overlay { opacity: 1; }
 
@@ -536,7 +536,7 @@ a { text-decoration: none; color: inherit; }
 
 .video-card {
   background: linear-gradient(160deg, #18181f 0%, #111118 100%);
-  border: 1px solid #262633; border-radius: 12px; overflow: visible;
+  border: 1px solid #262633; border-radius: 0; overflow: visible;
   transition: transform 0.45s cubic-bezier(.15,.67,.38,1), box-shadow 0.45s, border-color 0.35s, z-index 0s 0s;
   cursor: pointer; position: relative; z-index: 1;
   opacity: 0; animation: fadeUpIn 0.6s cubic-bezier(.25,.8,.25,1) forwards;
@@ -552,7 +552,7 @@ a { text-decoration: none; color: inherit; }
 }
 
 .video-card-inner {
-  border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  border-radius: 0; overflow: hidden; display: flex; flex-direction: column;
 }
 
 .video-thumb { position: relative; overflow: hidden; background: #050508; }
@@ -808,8 +808,8 @@ a { text-decoration: none; color: inherit; }
 }
 .lb-watermark { position: relative; }
 .lb-watermark::after {
-  content: 'yétou'; font-family: 'Sora', sans-serif; font-size: 3rem; font-weight: 700;
-  color: rgba(255,255,255,0.15); text-transform: lowercase; letter-spacing: 0.3em;
+  content: 'Gabon Pixel'; font-family: 'Sora', sans-serif; font-size: 3rem; font-weight: 700;
+  color: rgba(255,255,255,0.15); letter-spacing: 0.2em;
   transform: rotate(-15deg); text-shadow: 0 0 20px rgba(0,0,0,0.3);
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   pointer-events: none;
@@ -904,7 +904,7 @@ a { text-decoration: none; color: inherit; }
   .section-hd { flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 14px; }
   .section-hd h2 { font-size: 16px; }
   .photo-grid { gap: 10px; margin-bottom: 28px; }
-  .photo-item { border-radius: 12px; }
+  .photo-item { border-radius: 0; }
   .photo-item:hover { transform: none; }
   .photo-overlay { opacity: 1; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,.25) 50%, transparent 100%); padding: 14px; }
   .photo-info-title { font-size: 13px; white-space: normal; line-height: 1.35; transform: none; }
@@ -914,9 +914,9 @@ a { text-decoration: none; color: inherit; }
   .btn-buy-sm { padding: 7px 14px; font-size: 12px; min-height: 32px; }
   .watermark-sm { font-size: 10px; }
   .video-grid { gap: 14px; margin-bottom: 28px; }
-  .video-card { border-radius: 12px; }
+  .video-card { border-radius: 0; }
   .video-card:hover { transform: none; }
-  .video-card-inner { border-radius: 12px; }
+  .video-card-inner { border-radius: 0; }
   .video-body { padding: 12px 14px; }
   .video-title { font-size: 14px; }
   .video-sub { font-size: 11px; }

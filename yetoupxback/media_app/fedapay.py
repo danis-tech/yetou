@@ -77,7 +77,7 @@ def create_payment(
     amount_fcfa: int,
     customer_email: str,
     customer_name: str = "",
-    description: str = "Achat yétou",
+    description: str = "Achat Gabon Pixel",
 ) -> dict:
     if not is_configured():
         return {
@@ -94,7 +94,7 @@ def create_payment(
     name = (customer_name or "").strip()
     parts = name.split(None, 1) if name else []
     firstname = parts[0] if parts else "Client"
-    lastname = parts[1] if len(parts) > 1 else "yétou"
+    lastname = parts[1] if len(parts) > 1 else "Gabon Pixel"
 
     currency = getattr(settings, "FEDAPAY_CURRENCY", "XOF").strip().upper() or "XOF"
 

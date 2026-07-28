@@ -114,6 +114,14 @@ class PurchaseViewSet(viewsets.ModelViewSet):
 
         payment_reference = serializer.validated_data.get("payment_reference", "")
         if payment_reference:
+            # Sync session & log status if reference exists
+            session = PaymentSession.objects.filter(reference=payment_reference).first()
+            if session:
+                _complete_payment_session(session, log_message="Achat confirmé")
+            else:
+                PaymentSession.objects.filter(reference=payment_reference).update(status="success")
+                PaymentLog.objects.filter(reference=payment_reference).update(status="success", message="Paiement confirmé")
+
             # Idempotence : si le webhook (ou un appel précédent) a déjà créé l'achat
             # pour cette référence, on le renvoie tel quel au lieu d'en recréer un.
             existing = Purchase.objects.filter(user=user, payment_reference=payment_reference).first()
@@ -130,6 +138,10 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             payment_reference=serializer.validated_data.get("payment_reference", ""),
             payment_status=serializer.validated_data.get("payment_status", "success") or "success",
         )
+        if payment_reference:
+            PaymentSession.objects.filter(reference=payment_reference).update(status="success", purchase=purchase)
+            PaymentLog.objects.filter(reference=payment_reference).update(status="success")
+
         from users_app.notifications import notify_purchase
         if purchase.payment_status in ("success", "simulated", "failed", "pending"):
             notify_purchase(user, purchase)
@@ -481,15 +493,15 @@ def fedapay_initiate(request):
             amount_fcfa = int(amount_fcfa)
         except (TypeError, ValueError):
             return Response({"error": "Montant invalide."}, status=400)
-        if amount_fcfa < 500:
-            return Response({"error": "Le montant minimum est de 500 FCFA."}, status=400)
+        if amount_fcfa < 100:
+            return Response({"error": "Le montant minimum est de 100 FCFA."}, status=400)
 
     if not media_id and not plan:
         return Response({"error": "media_id ou plan requis."}, status=400)
 
     order_id = f"YETOU-FP-{request.user.id}-{int(time.time() * 1000)}"
     amount_usd = fcfa_to_usd(amount_fcfa)
-    description = media.title if media else f"Abonnement yétou ({plan})"
+    description = media.title if media else f"Abonnement Gabon Pixel ({plan})"
 
     session = PaymentSession.objects.create(
         reference=order_id,
@@ -608,8 +620,8 @@ def singpay_initiate(request):
             amount_fcfa = int(amount_fcfa)
         except (TypeError, ValueError):
             return Response({"error": "Montant invalide."}, status=400)
-        if amount_fcfa < 500:
-            return Response({"error": "Le montant minimum est de 500 FCFA."}, status=400)
+        if amount_fcfa < 100:
+            return Response({"error": "Le montant minimum est de 100 FCFA."}, status=400)
 
     if not media_id and not plan:
         return Response({"error": "media_id ou plan requis."}, status=400)

@@ -354,7 +354,7 @@ class PaymentSessionAdmin(admin.ModelAdmin):
 
     @admin.display(description="Statut", ordering="status")
     def status_badge(self, obj):
-        colors = {"success": "#22c55e", "failed": "#C8371A", "pending": "#8A8A95"}
+        colors = {"success": "#22c55e", "failed": "#C8371A", "pending": "#f59e0b"}
         color = colors.get(obj.status, "#8A8A95")
         return format_html(
             '<span style="background:{}20;color:{};padding:3px 10px;border-radius:8px;'

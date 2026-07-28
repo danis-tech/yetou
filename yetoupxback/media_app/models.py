@@ -115,7 +115,7 @@ class Media(models.Model):
         default="Commerciale · Illimitée",
         help_text="Droits accordés à l'acheteur. Par défaut : licence commerciale illimitée (usage web, print, publicité).")
     price = models.PositiveIntegerField("Prix (FCFA)", default=1500,
-        validators=[MinValueValidator(500, "Le prix minimum est de 500 FCFA.")],
+        validators=[MinValueValidator(100, "Le prix minimum est de 100 FCFA.")],
         help_text="Calculé automatiquement depuis la configuration de prix (type + qualité). "
                    "Modifiable uniquement s'il n'existe aucune configuration pour cette combinaison.")
 
@@ -349,8 +349,8 @@ class PricingConfig(models.Model):
     media_type = models.CharField("Type de média", max_length=10, choices=[("photo", "Photo"), ("video", "Vidéo")])
     quality = models.CharField("Qualité", max_length=10, choices=Quality.choices,
         help_text="Qualité concernée par ce tarif. Gérée dans « Qualités ».")
-    price = models.PositiveIntegerField("Prix (FCFA)", validators=[MinValueValidator(500)],
-        help_text="Prix minimum : 500 FCFA")
+    price = models.PositiveIntegerField("Prix (FCFA)", validators=[MinValueValidator(100)],
+        help_text="Prix minimum : 100 FCFA")
     description = models.CharField("Description", max_length=255, blank=True,
         help_text="Description affichée sur la grille tarifaire")
     is_active = models.BooleanField("Actif", default=True)

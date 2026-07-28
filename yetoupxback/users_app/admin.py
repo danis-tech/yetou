@@ -19,8 +19,8 @@ for model in (Group, Site, TokenProxy):
     except admin.sites.NotRegistered:
         pass
 
-admin.site.site_header = "yétou Administration"
-admin.site.site_title = "yétou Admin"
+admin.site.site_header = "Gabon Pixel Administration"
+admin.site.site_title = "Gabon Pixel Admin"
 admin.site.index_title = "Tableau de bord"
 
 original_index = admin.site.index

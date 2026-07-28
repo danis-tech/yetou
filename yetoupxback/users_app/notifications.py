@@ -25,7 +25,7 @@ def notify_welcome(user):
     create_notification(
         user,
         "welcome",
-        "Bienvenue sur yétou !",
+        "Bienvenue sur Gabon Pixel !",
         "Explorez le catalogue aérien du Gabon et téléchargez vos médias préférés.",
         action_url="/dashboard?tab=catalogue",
     )

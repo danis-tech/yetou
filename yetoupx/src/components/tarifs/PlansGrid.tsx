@@ -23,10 +23,10 @@ export default function PlansGrid({ onSelectPlan, onBrowse }: PlansGridProps) {
         <div className="plan-divider"></div>
         <ul className="plan-feats">
           {pricing.pricing.photo.map((row) => (
-            <li key={`photo-${row.quality}`}><i className="ti ti-check"></i>Photo {row.quality_display} — {formatFcfa(row.price)}</li>
+            <li key={`photo-${row.quality}`}><i className="ti ti-check"></i>Photo {row.quality_display} : {formatFcfa(row.price)}</li>
           ))}
           {pricing.pricing.video.map((row) => (
-            <li key={`video-${row.quality}`}><i className="ti ti-check"></i>Vidéo {row.quality_display} — {formatFcfa(row.price)}</li>
+            <li key={`video-${row.quality}`}><i className="ti ti-check"></i>Vidéo {row.quality_display} : {formatFcfa(row.price)}</li>
           ))}
           <li><i className="ti ti-check"></i>Licence commerciale incluse</li>
           <li><i className="ti ti-check"></i>Téléchargement immédiat</li>

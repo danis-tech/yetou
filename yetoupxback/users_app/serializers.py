@@ -3,6 +3,7 @@ from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import LoginSerializer
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.utils import timezone
 from .models import Notification
 
 User = get_user_model()
@@ -35,7 +36,15 @@ class CustomLoginSerializer(LoginSerializer):
 
 class CustomRegisterSerializer(RegisterSerializer):
     name = serializers.CharField(max_length=255, required=True)
+    accept_terms = serializers.BooleanField(required=True)
     username = None
+
+    def validate_accept_terms(self, value):
+        if value is not True:
+            raise serializers.ValidationError(
+                "Vous devez accepter les conditions d'utilisation et la politique de confidentialité."
+            )
+        return value
 
     def get_cleaned_data(self):
         data = super().get_cleaned_data()
@@ -53,6 +62,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         try:
             user = super().save(request)
             user.name = self.validated_data.get("name", "")
+            user.terms_accepted_at = timezone.now()
             user.save()
             return user
         except IntegrityError:
@@ -60,16 +70,14 @@ class CustomRegisterSerializer(RegisterSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    # Plan réellement en vigueur (« none » une fois l'abonnement expiré). Le plan
+    # n'est jamais modifiable par l'utilisateur : seul un paiement confirmé l'active.
+    plan = serializers.CharField(source="active_plan", read_only=True)
+
     class Meta:
         model = User
-        fields = ("id", "email", "name", "plan", "created_at")
-        read_only_fields = ("id", "email", "plan", "created_at")
-
-
-class UpdatePlanSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ("plan",)
+        fields = ("id", "email", "name", "plan", "plan_expires_at", "created_at")
+        read_only_fields = ("id", "email", "plan", "plan_expires_at", "created_at")
 
 
 class NotificationSerializer(serializers.ModelSerializer):

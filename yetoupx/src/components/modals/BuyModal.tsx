@@ -57,17 +57,15 @@ export default function BuyModal({
           <span className="modal-row-label">Total</span>
           <span className="modal-total">{item.price} FCFA</span>
         </div>
-        {isMobileMethod(activePayMethod) && (
-          <div className="form-group" style={{ marginTop: "14px" }}>
-            <label>Numéro de téléphone</label>
-            <input
-              type="tel"
-              placeholder="Ex: 077 00 00 00"
-              value={clientPhone}
-              onChange={(e) => onPhoneChange(e.target.value)}
-            />
-          </div>
-        )}
+        <div className="form-group" style={{ marginTop: "14px" }}>
+          <label>{isMobileMethod(activePayMethod) ? `Numéro ${activePayMethod}` : "Numéro de téléphone"}</label>
+          <input
+            type="tel"
+            placeholder="Ex: 077 00 00 00"
+            value={clientPhone}
+            onChange={(e) => onPhoneChange(e.target.value)}
+          />
+        </div>
         <div className="pay-methods">
           {PAY_METHODS.map((method) => (
             <div
@@ -83,14 +81,14 @@ export default function BuyModal({
               />
               {method.name}
               {!method.available && (
-                <span style={{ display: "block", fontSize: "9px", color: "#8A8A95", marginTop: "2px" }}>Bientôt</span>
+                <span style={{ display: "block", fontSize: "12px", color: "var(--ink-2)", marginTop: "2px" }}>Bientôt</span>
               )}
             </div>
           ))}
         </div>
         {isCardMethod(activePayMethod) && (
-          <p style={{ fontSize: "11px", color: "#8A8A95", margin: "0 0 12px", lineHeight: 1.4 }}>
-            Formulaire carte sécurisé — saisissez votre numéro Visa ou Mastercard (sans compte crypto).
+          <p style={{ fontSize: "11px", color: "var(--ink-2)", margin: "0 0 12px", lineHeight: 1.4 }}>
+            Vous serez redirigé vers le formulaire carte sécurisé de notre prestataire MyPVit.
           </p>
         )}
         <button className="btn-pay" onClick={onConfirm} disabled={payLoading}>

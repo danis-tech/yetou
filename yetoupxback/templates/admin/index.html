@@ -5,79 +5,94 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
 <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
-  <div class="yetou-kpi">
-    <div class="yetou-kpi-label">Inscriptions</div>
-    <div class="yetou-kpi-value">{{ total_users|default:"0" }}</div>
-    <div class="yetou-kpi-sub">comptes créés</div>
+  <div class="pixia-kpi">
+    <div class="pixia-kpi-label">Inscriptions</div>
+    <div class="pixia-kpi-value">{{ total_users|default:"0" }}</div>
+    <div class="pixia-kpi-sub">comptes créés</div>
   </div>
-  <div class="yetou-kpi">
-    <div class="yetou-kpi-label">Abonnés</div>
-    <div class="yetou-kpi-value" style="color:var(--primary)">{{ subscribers|default:"0" }}</div>
-    <div class="yetou-kpi-sub">{{ subscriber_details|default:"" }}</div>
+  <div class="pixia-kpi">
+    <div class="pixia-kpi-label">Abonnés</div>
+    <div class="pixia-kpi-value">{{ subscribers|default:"0" }}</div>
+    <div class="pixia-kpi-sub">{{ subscriber_details|default:"" }}</div>
   </div>
-  <div class="yetou-kpi">
-    <div class="yetou-kpi-label">Recette jour</div>
-    <div class="yetou-kpi-value" style="color:#22c55e">{{ today_revenue|default:"0" }} <small class="yetou-kpi-unit">FCFA</small></div>
-    <div class="yetou-kpi-sub">{{ today_orders|default:"0" }} achat(s)</div>
+  <div class="pixia-kpi">
+    <div class="pixia-kpi-label">Recette jour</div>
+    <div class="pixia-kpi-value">{{ today_revenue|default:"0" }} <small class="pixia-kpi-unit">FCFA</small></div>
+    <div class="pixia-kpi-sub">{{ today_orders|default:"0" }} achat(s)</div>
   </div>
-  <div class="yetou-kpi">
-    <div class="yetou-kpi-label">CA mois</div>
-    <div class="yetou-kpi-value">{{ month_revenue|default:"0" }} <small class="yetou-kpi-unit">FCFA</small></div>
-    <div class="yetou-kpi-sub">{{ month_orders|default:"0" }} achat(s)</div>
+  <div class="pixia-kpi">
+    <div class="pixia-kpi-label">CA mois</div>
+    <div class="pixia-kpi-value">{{ month_revenue|default:"0" }} <small class="pixia-kpi-unit">FCFA</small></div>
+    <div class="pixia-kpi-sub">{{ month_orders|default:"0" }} achat(s)</div>
   </div>
-  <div class="yetou-kpi">
-    <div class="yetou-kpi-label">CA total</div>
-    <div class="yetou-kpi-value">{{ total_revenue|default:0|floatformat:0 }} <small class="yetou-kpi-unit">FCFA</small></div>
-    <div class="yetou-kpi-sub">{{ total_purchases|default:"0" }} achats · {{ total_media|default:"0" }} médias</div>
+  <div class="pixia-kpi">
+    <div class="pixia-kpi-label">CA total</div>
+    <div class="pixia-kpi-value">{{ total_revenue|default:0|floatformat:0 }} <small class="pixia-kpi-unit">FCFA</small></div>
+    <div class="pixia-kpi-sub">{{ total_purchases|default:"0" }} achats · {{ total_media|default:"0" }} médias</div>
   </div>
 </div>
 
+<!-- Contributeurs : ce qui attend une action de l'équipe -->
+<div class="pixia-contrib-row">
+  <a class="pixia-contrib-card {% if contrib_pending_media %}is-due{% endif %}" href="{{ contrib_review_url }}">
+    <i class="ti ti-photo-search"></i>
+    <span><strong>{{ contrib_pending_media|default:"0" }}</strong> média{{ contrib_pending_media|pluralize }} de contributeur à valider</span>
+  </a>
+  <a class="pixia-contrib-card {% if contrib_pending_payouts %}is-due{% endif %}" href="{{ contrib_payouts_url }}">
+    <i class="ti ti-cash"></i>
+    <span><strong>{{ contrib_pending_payouts|default:"0" }}</strong> retrait{{ contrib_pending_payouts|pluralize }} à traiter{% if contrib_pending_payouts %}, {{ contrib_pending_payout_amount }} FCFA{% endif %}</span>
+  </a>
+  <a class="pixia-contrib-card" href="{{ contrib_profiles_url }}">
+    <i class="ti ti-users"></i>
+    <span><strong>{{ contrib_count|default:"0" }}</strong> contributeur{{ contrib_count|pluralize }} actif{{ contrib_count|pluralize }}</span>
+  </a>
+</div>
+
 <!-- Répartition générale : Navigation (gauche) / Statistiques (droite), séparées par une ligne verticale -->
-<div class="yetou-main-split">
+<div class="pixia-main-split">
 
   <!-- ═══ Gauche : Navigation (liste des applications) ═══ -->
-  <div class="yetou-nav-col">
-    <div class="yetou-dash-eyebrow"><i class="ti ti-list-details"></i> Navigation</div>
+  <div class="pixia-nav-col">
+    <div class="pixia-dash-eyebrow"><i class="ti ti-list-details"></i> Navigation</div>
     {{ block.super }}
   </div>
 
   <!-- ═══ Droite : Statistiques ═══ -->
-  <div class="yetou-stats-col">
-    <div class="yetou-dash-eyebrow"><i class="ti ti-chart-histogram"></i> Statistiques</div>
+  <div class="pixia-stats-col">
+    <div class="pixia-dash-eyebrow"><i class="ti ti-chart-histogram"></i> Statistiques</div>
 
-    <div class="yetou-stats-row">
-      <div class="yetou-card" style="flex:1.6;min-width:260px">
-        <div class="yetou-card-accent" style="background:var(--primary)"></div>
-        <div class="yetou-card-head">
+    <div class="pixia-stats-row">
+      <div class="pixia-card" style="flex:1.6;min-width:260px">
+        <div class="pixia-card-accent" style="background:var(--primary)"></div>
+        <div class="pixia-card-head">
           <h2><i class="ti ti-trending-up"></i> Évolution du CA</h2>
-          <span class="yetou-card-sub">14 derniers jours</span>
+          <span class="pixia-card-sub">14 derniers jours</span>
         </div>
-        <div class="yetou-legend">
-          <span><i style="background:var(--primary)"></i>Recette (FCFA)</span>
-          <span><i style="background:var(--body-quiet-color)"></i>Commandes</span>
+        <div class="pixia-legend">
+          <span><i style="background:var(--chart-1)"></i>Recette (FCFA). Survolez un jour pour voir le nombre de commandes.</span>
         </div>
-        <div class="yetou-chart-box" style="height:200px"><canvas id="chart-revenue"></canvas></div>
+        <div class="pixia-chart-box" style="height:200px"><canvas id="chart-revenue"></canvas></div>
       </div>
 
-      <div class="yetou-card" style="flex:1;min-width:220px">
-        <div class="yetou-card-accent" style="background:#8A5CF6"></div>
-        <div class="yetou-card-head">
+      <div class="pixia-card" style="flex:1;min-width:220px">
+        <div class="pixia-card-accent" style="background:#8A5CF6"></div>
+        <div class="pixia-card-head">
           <h2><i class="ti ti-chart-donut-3"></i> Ventes par type</h2>
         </div>
-        <div class="yetou-donut-wrap">
-          <div class="yetou-chart-box yetou-donut-box"><canvas id="chart-type"></canvas>
-            <div class="yetou-donut-center">
+        <div class="pixia-donut-wrap">
+          <div class="pixia-chart-box pixia-donut-box"><canvas id="chart-type"></canvas>
+            <div class="pixia-donut-center">
               <strong id="chart-type-total">0</strong>
               <span>vente(s)</span>
             </div>
           </div>
-          <div class="yetou-stat-list">
-            <div class="yetou-stat-row">
-              <span><i style="background:#22c55e"></i>Photos</span>
+          <div class="pixia-stat-list">
+            <div class="pixia-stat-row">
+              <span><i style="background:var(--chart-1)"></i>Photos</span>
               <strong id="chart-type-photo">0</strong>
             </div>
-            <div class="yetou-stat-row">
-              <span><i style="background:var(--primary)"></i>Vidéos</span>
+            <div class="pixia-stat-row">
+              <span><i style="background:var(--chart-2)"></i>Vidéos</span>
               <strong id="chart-type-video">0</strong>
             </div>
           </div>
@@ -85,9 +100,9 @@
       </div>
     </div>
 
-    <div class="yetou-card">
-      <div class="yetou-card-accent" style="background:#22c55e"></div>
-      <div class="yetou-card-head">
+    <div class="pixia-card">
+      <div class="pixia-card-accent" style="background:#22c55e"></div>
+      <div class="pixia-card-head">
         <h2><i class="ti ti-receipt-2"></i> Derniers achats</h2>
         <a href="{% url 'admin:media_app_purchase_changelist' %}">Voir tout <i class="ti ti-arrow-right"></i></a>
       </div>
@@ -95,25 +110,25 @@
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr>
-              <th class="yetou-th">Client</th>
-              <th class="yetou-th">Média</th>
-              <th class="yetou-th">Type</th>
-              <th class="yetou-th" style="text-align:right">Prix</th>
-              <th class="yetou-th" style="text-align:right">Téléchargements</th>
-              <th class="yetou-th">Date</th>
+              <th class="pixia-th">Client</th>
+              <th class="pixia-th">Média</th>
+              <th class="pixia-th">Type</th>
+              <th class="pixia-th" style="text-align:right">Prix</th>
+              <th class="pixia-th" style="text-align:right">Téléchargements</th>
+              <th class="pixia-th">Date</th>
             </tr>
           </thead>
           <tbody>
             {% for p in recent_purchases %}
-            <tr class="yetou-tr">
-              <td class="yetou-td">{{ p.user.email|truncatechars:30 }}</td>
-              <td class="yetou-td">{{ p.media.title|truncatechars:40 }}</td>
+            <tr class="pixia-tr">
+              <td class="pixia-td">{{ p.user.email|truncatechars:30 }}</td>
+              <td class="pixia-td">{{ p.media.title|truncatechars:40 }}</td>
               <td style="padding:10px 12px">
-                <span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;background:{% if p.media.type == 'video' %}rgba(200,55,26,0.15){% else %}rgba(34,197,94,0.1){% endif %};color:{% if p.media.type == 'video' %}var(--primary){% else %}#22c55e{% endif %}">{{ p.media.get_type_display }}</span>
+                <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:{% if p.media.type == 'video' %}rgba(47,111,115,0.15){% else %}rgba(34,197,94,0.1){% endif %};color:{% if p.media.type == 'video' %}var(--primary){% else %}#22c55e{% endif %}">{{ p.media.get_type_display }}</span>
               </td>
-              <td class="yetou-td" style="font-size:13px;font-weight:700;text-align:right">{{ p.price }} FCFA</td>
-              <td class="yetou-td yetou-td-quiet" style="text-align:right">{{ p.download_count }}/{{ p.max_downloads }}</td>
-              <td class="yetou-td yetou-td-quiet" style="font-size:11px">{{ p.purchased_at|date:"d/m/Y H:i" }}</td>
+              <td class="pixia-td" style="font-size:13px;font-weight:700;text-align:right">{{ p.price }} FCFA</td>
+              <td class="pixia-td pixia-td-quiet" style="text-align:right">{{ p.download_count }}/{{ p.max_downloads }}</td>
+              <td class="pixia-td pixia-td-quiet" style="font-size:11px">{{ p.purchased_at|date:"d/m/Y H:i" }}</td>
             </tr>
             {% empty %}
             <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--body-quiet-color);font-size:13px">Aucun achat pour le moment.</td></tr>
@@ -123,97 +138,108 @@
       </div>
     </div>
 
-    <div class="yetou-card yetou-card-grow">
-      <div class="yetou-card-accent" style="background:#f59e0b"></div>
-      <div class="yetou-card-head">
+    <div class="pixia-card pixia-card-grow">
+      <div class="pixia-card-accent" style="background:#f59e0b"></div>
+      <div class="pixia-card-head">
         <h2><i class="ti ti-tag"></i> Meilleures catégories</h2>
-        <span class="yetou-card-sub">Par nombre de ventes</span>
+        <span class="pixia-card-sub">Par nombre de ventes</span>
       </div>
-      <div class="yetou-chart-box" style="flex:1;min-height:200px"><canvas id="chart-category"></canvas></div>
+      <div class="pixia-chart-box" style="flex:1;min-height:200px"><canvas id="chart-category"></canvas></div>
     </div>
   </div>
 </div>
 
 <style>
-  .yetou-kpi {
+  .pixia-kpi {
     background: linear-gradient(135deg, var(--card-bg), var(--card-bg-soft));
     border: 1px solid var(--border-color); border-radius: 12px; padding: 20px 24px;
     flex: 1; min-width: 180px;
   }
-  .yetou-kpi-label {
+  .pixia-kpi-label {
     font-size: 11px; color: var(--body-quiet-color); font-weight: 500;
-    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+     letter-spacing: .5px; margin-bottom: 6px;
   }
-  .yetou-kpi-value { font-family: 'Sora', sans-serif; font-size: 32px; font-weight: 700; color: var(--body-fg); }
-  .yetou-kpi-unit { font-size: 14px; color: var(--body-quiet-color); font-weight: 400; }
-  .yetou-kpi-sub { font-size: 11px; color: var(--body-quiet-color); margin-top: 4px; }
+  .pixia-kpi-value { font-family: var(--font-family-primary); font-size: 32px; font-weight: 700; color: var(--body-fg); }
+  .pixia-kpi-unit { font-size: 14px; color: var(--body-quiet-color); font-weight: 400; }
+  .pixia-kpi-sub { font-size: 11px; color: var(--body-quiet-color); margin-top: 4px; }
 
-  .yetou-main-split { display: flex; align-items: stretch; gap: 0; margin-bottom: 28px; }
-  .yetou-nav-col {
+  .pixia-contrib-row { display: flex; gap: 12px; flex-wrap: wrap; margin: -8px 0 24px; }
+  .pixia-contrib-card {
+    flex: 1; min-width: 240px; display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;
+    color: var(--body-fg) !important; text-decoration: none !important; font-size: 13px;
+  }
+  .pixia-contrib-card i { font-size: 20px; color: var(--body-quiet-color); }
+  .pixia-contrib-card strong { font-size: 18px; margin-right: 4px; }
+  .pixia-contrib-card:hover { border-color: var(--primary); }
+  .pixia-contrib-card.is-due { border-color: #C8371A; box-shadow: inset 3px 0 0 #C8371A; }
+  .pixia-contrib-card.is-due i, .pixia-contrib-card.is-due strong { color: #C8371A; }
+  .pixia-main-split { display: flex; align-items: stretch; gap: 0; margin-bottom: 28px; }
+  .pixia-nav-col {
     flex: 1; min-width: 0; padding-right: 28px; margin-right: 28px; border-right: 1px solid var(--border-color);
     display: flex; flex-direction: column; gap: 16px;
   }
-  .yetou-stats-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
-  .yetou-stats-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; }
+  .pixia-stats-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  .pixia-stats-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: stretch; }
   @media (max-width: 900px) {
-    .yetou-main-split { flex-direction: column; }
-    .yetou-nav-col { border-right: none; border-bottom: 1px solid var(--border-color); padding-right: 0; margin-right: 0; padding-bottom: 20px; }
+    .pixia-main-split { flex-direction: column; }
+    .pixia-nav-col { border-right: none; border-bottom: 1px solid var(--border-color); padding-right: 0; margin-right: 0; padding-bottom: 20px; }
   }
 
-  .yetou-dash-eyebrow {
+  .pixia-dash-eyebrow {
     display: flex; align-items: center; gap: 6px;
-    font-family: 'Sora', sans-serif; font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 1px; color: var(--body-quiet-color);
+    font-family: var(--font-family-primary); font-size: 11px; font-weight: 700;
+     letter-spacing: 1px; color: var(--body-quiet-color);
     padding-bottom: 8px; border-bottom: 1px solid var(--border-color);
   }
-  .yetou-dash-eyebrow i { color: var(--primary); font-size: 13px; }
+  .pixia-dash-eyebrow i { color: var(--primary); font-size: 13px; }
 
-  .yetou-card {
+  .pixia-card {
     position: relative; overflow: hidden;
     background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px 24px 22px;
     display: flex; flex-direction: column;
   }
-  .yetou-card-grow { flex: 1; }
-  .yetou-card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; opacity: 0.85; }
-  .yetou-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-  .yetou-card-head h2 {
+  .pixia-card-grow { flex: 1; }
+  .pixia-card-accent { display: none; }
+  .pixia-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .pixia-card-head h2 {
     display: flex; align-items: center; gap: 8px; margin: 0;
-    font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700; color: var(--body-fg);
+    font-family: var(--font-family-primary); font-size: 14px; font-weight: 700; color: var(--body-fg);
   }
-  .yetou-card-head h2 i { color: var(--primary); font-size: 15px; }
-  .yetou-card-head a { font-size: 11px; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px; }
-  .yetou-card-head a:hover { color: var(--link-hover-color); }
-  .yetou-card-sub { font-size: 11px; color: var(--body-quiet-color); }
+  .pixia-card-head h2 i { color: var(--primary); font-size: 15px; }
+  .pixia-card-head a { font-size: 11px; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+  .pixia-card-head a:hover { color: var(--link-hover-color); }
+  .pixia-card-sub { font-size: 11px; color: var(--body-quiet-color); }
 
-  .yetou-legend { display: flex; gap: 14px; font-size: 10px; color: var(--body-quiet-color); margin-bottom: 10px; }
-  .yetou-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+  .pixia-legend { display: flex; gap: 14px; font-size: 10px; color: var(--body-quiet-color); margin-bottom: 10px; }
+  .pixia-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 
-  .yetou-chart-box { position: relative; width: 100%; }
+  .pixia-chart-box { position: relative; width: 100%; }
 
-  .yetou-donut-wrap { display: flex; align-items: center; gap: 20px; flex: 1; }
-  .yetou-donut-box { flex: 0 0 150px; height: 150px; }
-  .yetou-donut-center {
+  .pixia-donut-wrap { display: flex; align-items: center; gap: 20px; flex: 1; }
+  .pixia-donut-box { flex: 0 0 150px; height: 150px; }
+  .pixia-donut-center {
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
     pointer-events: none;
   }
-  .yetou-donut-center strong { font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: var(--body-fg); line-height: 1.1; }
-  .yetou-donut-center span { font-size: 10px; color: var(--body-quiet-color); }
-  .yetou-stat-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
-  .yetou-stat-row {
+  .pixia-donut-center strong { font-family: var(--font-family-primary); font-size: 22px; font-weight: 700; color: var(--body-fg); line-height: 1.1; }
+  .pixia-donut-center span { font-size: 10px; color: var(--body-quiet-color); }
+  .pixia-stat-list { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .pixia-stat-row {
     display: flex; align-items: center; justify-content: space-between;
     background: var(--card-bg-soft); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px;
   }
-  .yetou-stat-row span { display: flex; align-items: center; font-size: 12px; color: var(--body-fg); }
-  .yetou-stat-row span i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
-  .yetou-stat-row strong { font-family: 'Sora', sans-serif; font-size: 15px; color: var(--body-fg); }
+  .pixia-stat-row span { display: flex; align-items: center; font-size: 12px; color: var(--body-fg); }
+  .pixia-stat-row span i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+  .pixia-stat-row strong { font-family: var(--font-family-primary); font-size: 15px; color: var(--body-fg); }
 
-  .yetou-th {
+  .pixia-th {
     text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700;
-    color: var(--body-quiet-color); text-transform: uppercase; border-bottom: 1px solid var(--border-color);
+    color: var(--body-quiet-color);  border-bottom: 1px solid var(--border-color);
   }
-  .yetou-tr { border-bottom: 1px solid var(--hairline-color); }
-  .yetou-td { padding: 10px 12px; font-size: 12px; color: var(--body-fg); }
-  .yetou-td-quiet { color: var(--body-quiet-color); }
+  .pixia-tr { border-bottom: 1px solid var(--hairline-color); }
+  .pixia-td { padding: 10px 12px; font-size: 12px; color: var(--body-fg); }
+  .pixia-td-quiet { color: var(--body-quiet-color); }
 </style>
 
 <script>
@@ -226,14 +252,16 @@
       const css = getComputedStyle(document.documentElement);
       const v = (name, fallback) => (css.getPropertyValue(name) || '').trim() || fallback;
       return {
-        quiet: v('--body-quiet-color', '#8A8A95'),
-        fg: v('--body-fg', '#F0EFEA'),
-        bg: v('--body-bg', '#0A0A0F'),
-        border: v('--border-color', '#2A2A35'),
-        card: v('--card-bg', '#14141A'),
-        cardSoft: v('--card-bg-soft', '#1A1A22'),
-        primary: v('--primary', '#C8371A'),
-        green: '#22c55e',
+        quiet: v('--body-quiet-color', '#4D5C6B'),
+        fg: v('--body-fg', '#14233A'),
+        bg: v('--body-bg', '#EEF1EC'),
+        border: v('--border-color', '#C9D2CB'),
+        card: v('--card-bg', '#F8FAF7'),
+        cardSoft: v('--card-bg-soft', '#F1F4EF'),
+        primary: v('--primary', '#2F6F73'),
+        // Couleurs de séries validées (dataviz/validate_palette.js) pour chaque thème.
+        series1: v('--chart-1', '#00909A'),
+        series2: v('--chart-2', '#B07A1E'),
       };
     }
 
@@ -253,7 +281,7 @@
       const h = hex.replace('#', '');
       const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
       const num = parseInt(full, 16);
-      if (Number.isNaN(num)) return `rgba(200,55,26,${alpha})`;
+      if (Number.isNaN(num)) return `rgba(47,111,115,${alpha})`;
       const r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
       return `rgba(${r},${g},${b},${alpha})`;
     }
@@ -261,7 +289,7 @@
     function renderCharts() {
       const t = themeColors();
       Chart.defaults.color = t.quiet;
-      Chart.defaults.font.family = "'Inter', sans-serif";
+      Chart.defaults.font.family = "'Familjen Grotesk', sans-serif";
       Chart.defaults.font.size = 11;
       const gridColor = hexToRgba(t.border, 0.6);
       const tooltipOpts = { backgroundColor: t.cardSoft, titleColor: t.fg, bodyColor: t.fg, borderColor: t.border, borderWidth: 1, padding: 10 };
@@ -271,41 +299,25 @@
       categoryChart && categoryChart.destroy();
 
       if (revenueCanvas) {
-        const ctx = revenueCanvas.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-        gradient.addColorStop(0, hexToRgba(t.primary, 0.35));
-        gradient.addColorStop(1, hexToRgba(t.primary, 0));
-
         revenueChart = new Chart(revenueCanvas, {
           type: 'line',
           data: {
             labels: revenueLabels,
-            datasets: [
-              {
-                label: 'Recette (FCFA)',
-                data: revenueData,
-                borderColor: t.primary,
-                backgroundColor: gradient,
-                fill: true,
-                tension: 0.35,
-                pointRadius: 3,
-                pointBackgroundColor: t.primary,
-                pointBorderColor: t.bg,
-                pointBorderWidth: 1.5,
-                yAxisID: 'y',
-              },
-              {
-                label: 'Commandes',
-                data: ordersData,
-                borderColor: t.quiet,
-                backgroundColor: 'transparent',
-                borderDash: [4, 4],
-                tension: 0.35,
-                pointRadius: 2,
-                pointBackgroundColor: t.quiet,
-                yAxisID: 'y1',
-              },
-            ],
+            datasets: [{
+              label: 'Recette (FCFA)',
+              data: revenueData,
+              borderColor: t.series1,
+              backgroundColor: hexToRgba(t.series1, 0.08),
+              fill: true,
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 0,
+              pointHitRadius: 12,
+              pointHoverRadius: 5,
+              pointHoverBackgroundColor: t.series1,
+              pointHoverBorderColor: t.card,
+              pointHoverBorderWidth: 2,
+            }],
           },
           options: {
             responsive: true,
@@ -317,9 +329,10 @@
                 ...tooltipOpts,
                 titleFont: { weight: '700' },
                 callbacks: {
-                  label: function(item) {
-                    if (item.dataset.yAxisID === 'y1') return ' ' + item.formattedValue + ' commande(s)';
-                    return ' ' + item.formattedValue + ' FCFA';
+                  label: (item) => ' ' + item.formattedValue + ' FCFA',
+                  footer: (items) => {
+                    const n = ordersData[items[0].dataIndex] || 0;
+                    return n + ' commande' + (n > 1 ? 's' : '');
                   },
                 },
               },
@@ -327,12 +340,8 @@
             scales: {
               x: { grid: { display: false }, ticks: { maxRotation: 0 } },
               y: {
-                position: 'left', grid: { color: gridColor }, border: { display: false },
+                beginAtZero: true, grid: { color: gridColor }, border: { display: false },
                 ticks: { callback: (v) => v >= 1000 ? (v / 1000) + 'k' : v },
-              },
-              y1: {
-                position: 'right', grid: { display: false }, border: { display: false },
-                ticks: { precision: 0 }, beginAtZero: true,
               },
             },
           },
@@ -356,10 +365,10 @@
             labels: ['Photos', 'Vidéos'],
             datasets: [{
               data: hasData ? typeData : [1, 1],
-              backgroundColor: hasData ? [t.green, t.primary] : [t.border, t.cardSoft],
+              backgroundColor: hasData ? [t.series1, t.series2] : [t.border, t.cardSoft],
               borderColor: t.card,
-              borderWidth: 3,
-              hoverOffset: 6,
+              borderWidth: 2,
+              hoverOffset: 4,
             }],
           },
           options: {
@@ -381,11 +390,11 @@
             labels: categoryLabels.length ? categoryLabels : ['Aucune vente'],
             datasets: [{
               data: categoryLabels.length ? categoryData : [0],
-              backgroundColor: hexToRgba(t.primary, 0.15),
-              borderColor: t.primary,
-              borderWidth: 1.5,
-              borderRadius: 6,
-              maxBarThickness: 28,
+              backgroundColor: t.series1,
+              borderWidth: 0,
+              borderRadius: 4,
+              borderSkipped: 'start',
+              maxBarThickness: 22,
             }],
           },
           options: {

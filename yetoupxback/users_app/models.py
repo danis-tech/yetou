@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 
 
 class UserManager(BaseUserManager):
@@ -29,6 +31,14 @@ class User(AbstractUser):
         ("pro", "Pro - 50 000 FCFA"),
     ]
     plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default="none")
+    plan_expires_at = models.DateTimeField("expiration de l'abonnement", null=True, blank=True)
+    terms_accepted_at = models.DateTimeField("conditions acceptées le", null=True, blank=True,
+        help_text="Date d'acceptation des conditions d'utilisation et de la politique de confidentialité.")
+
+    # Prix des abonnements, source de vérité côté serveur (jamais le montant
+    # envoyé par le client).
+    PLAN_PRICES = {"monthly": 15000, "pro": 50000}
+    PLAN_DURATION = timedelta(days=30)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -41,6 +51,28 @@ class User(AbstractUser):
     def __str__(self):
         return self.email
 
+    @property
+    def active_plan(self) -> str:
+        """Plan réellement en vigueur : « none » une fois l'abonnement expiré.
+        Un plan sans date d'expiration (attribué depuis l'admin) reste actif."""
+        if self.plan == "none":
+            return "none"
+        if self.plan_expires_at and self.plan_expires_at <= timezone.now():
+            return "none"
+        return self.plan
+
+    def activate_plan(self, plan: str) -> None:
+        """Active ou prolonge un abonnement payé pour PLAN_DURATION. Un
+        renouvellement du même plan s'ajoute à la période restante."""
+        now = timezone.now()
+        if self.active_plan == plan and self.plan_expires_at and self.plan_expires_at > now:
+            start = self.plan_expires_at
+        else:
+            start = now
+        self.plan = plan
+        self.plan_expires_at = start + self.PLAN_DURATION
+        self.save(update_fields=["plan", "plan_expires_at"])
+
 
 class Notification(models.Model):
     TYPE_CHOICES = [
@@ -50,6 +82,14 @@ class Notification(models.Model):
         ("payment_pending", "Paiement en attente"),
         ("download_limit_warning", "Quota téléchargement"),
         ("plan_activated", "Plan activé"),
+        ("contribution_submitted", "Contribution reçue"),
+        ("contribution_approved", "Contribution publiée"),
+        ("contribution_rejected", "Contribution refusée"),
+        ("contributor_earning", "Gain contributeur"),
+        ("payout_requested", "Retrait demandé"),
+        ("payout_paid", "Retrait versé"),
+        ("payout_proof", "Preuve de paiement ajoutée"),
+        ("payout_rejected", "Retrait refusé"),
         ("system", "Système"),
     ]
 

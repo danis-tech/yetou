@@ -81,6 +81,8 @@ export interface ApiMedia {
   capture_time: string | null;
   downloads: number;
   likes_count: number;
+  /** Nom du contributeur ; vide pour un média de la plateforme. */
+  contributor_name?: string;
   is_liked: boolean;
   views: number;
   created_at: string;
@@ -169,8 +171,8 @@ export interface DashboardSummary {
   notifications: ApiNotification[];
 }
 
-async function authFetch(path: string, options: RequestInit = {}) {
-  const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
+export async function authFetch(path: string, options: RequestInit = {}) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("pixia_token") : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> || {}),
@@ -186,7 +188,7 @@ async function fetchMediaPage(
   const apiPath = path.startsWith("/") ? path : `/${path}`;
   const apiBase = getApiUrl();
   const url = path.startsWith("http") ? path : `${apiBase}${apiPath}`;
-  const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
+  const token = typeof window !== "undefined" ? localStorage.getItem("pixia_token") : null;
 
   let res = token
     ? await authFetch(apiPath, { signal })
@@ -277,7 +279,7 @@ export async function fetchMediaById(id: number): Promise<ApiMedia | null> {
   try {
     const apiBase = getApiUrl();
     const url = `${apiBase}/media/${id}/`;
-    const token = typeof window !== "undefined" ? localStorage.getItem("yetou_token") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("pixia_token") : null;
 
     let res = token ? await authFetch(`/media/${id}/`) : await fetch(url);
     if ((res.status === 401 || res.status === 403) && token) {
@@ -334,23 +336,6 @@ export async function fetchPurchases(): Promise<ApiPurchase[]> {
   }
 }
 
-export async function createPurchase(
-  mediaId: number,
-  options?: { payment_method?: string; payment_reference?: string; payment_status?: string },
-): Promise<ApiPurchase | null> {
-  const res = await authFetch("/purchases/", {
-    method: "POST",
-    body: JSON.stringify({
-      media_id: mediaId,
-      payment_method: options?.payment_method || "",
-      payment_reference: options?.payment_reference || "",
-      payment_status: options?.payment_status || "success",
-    }),
-  });
-  if (!res.ok) return null;
-  return res.json();
-}
-
 export async function downloadPurchase(
   purchaseId: number,
 ): Promise<{ url: string; remaining: number; message?: string } | null> {
@@ -387,106 +372,73 @@ export async function markAllNotificationsRead(): Promise<boolean> {
   return res.ok;
 }
 
-export interface FedapayInitiateResult {
-  payment_url: string;
-  reference: string;
-  transaction_id?: string;
-  amount_fcfa?: number;
-}
+export type PaymentStatus = "pending" | "success" | "failed";
 
-export async function initiateFedapayPayment(data: {
-  media_id?: number | null;
-  amount_fcfa: number;
+export interface ApiPayment {
+  reference: string;
+  status: PaymentStatus;
+  message: string;
   method: string;
-  plan?: string;
-}): Promise<{ ok: true; data: FedapayInitiateResult } | { ok: false; error: string }> {
-  const res = await authFetch("/payments/fedapay/initiate/", {
-    method: "POST",
-    body: JSON.stringify({
-      media_id: data.media_id ?? null,
-      amount_fcfa: data.amount_fcfa,
-      method: data.method,
-      plan: data.plan || "",
-    }),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = body as { error?: string; message?: string };
-    return { ok: false, error: err.error || err.message || "Erreur paiement carte." };
-  }
-  return { ok: true, data: body as FedapayInitiateResult };
-}
-
-export async function confirmFedapayPayment(data: {
-  reference: string;
-  transaction_id: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  const res = await authFetch("/payments/fedapay/confirm/", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = body as { error?: string; message?: string };
-    return { ok: false, error: err.error || err.message || "Confirmation impossible." };
-  }
-  return { ok: true };
-}
-
-export interface SingpayInitiateResult {
-  reference: string;
   amount_fcfa: number;
+  media_id: number | null;
+  plan: string;
+  purchase_id: number | null;
+  /** Formulaire bancaire PVit (paiement carte uniquement). */
+  redirect_url: string;
+  user_plan: string;
+  plan_expires_at: string | null;
 }
 
 /**
- * Crée la session de paiement mobile/PayPal côté serveur (montant recalculé à
- * partir du média, jamais fait confiance au montant envoyé par le client),
- * avant d'appeler SingPay. Nécessite d'être connecté.
+ * Initie un paiement MyPVit côté serveur. Le montant est calculé par Django à
+ * partir du média ou du plan : aucun montant n'est envoyé par le client.
  */
-export async function initiateSingpayPayment(data: {
+export async function initiatePayment(data: {
   media_id?: number | null;
-  amount_fcfa: number;
-  method: string;
   plan?: string;
-}): Promise<{ ok: true; data: SingpayInitiateResult } | { ok: false; error: string }> {
-  const res = await authFetch("/payments/singpay/initiate/", {
-    method: "POST",
-    body: JSON.stringify({
-      media_id: data.media_id ?? null,
-      amount_fcfa: data.amount_fcfa,
-      method: data.method,
-      plan: data.plan || "",
-    }),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = body as { error?: string; message?: string };
-    return { ok: false, error: err.error || err.message || "Erreur paiement mobile." };
-  }
-  return { ok: true, data: body as SingpayInitiateResult };
-}
-
-export async function checkPaymentStatus(
-  reference: string,
-): Promise<{ status: "success" | "failed" | "pending" | "unknown"; message: string }> {
+  method: string;
+  phone: string;
+}): Promise<{ ok: true; data: ApiPayment } | { ok: false; error: string }> {
   try {
-    const res = await fetch(`${getApiUrl()}/payments/status/?reference=${encodeURIComponent(reference)}`);
+    const res = await authFetch("/payments/initiate/", {
+      method: "POST",
+      body: JSON.stringify({
+        media_id: data.media_id ?? null,
+        plan: data.plan || "",
+        method: data.method,
+        phone: data.phone,
+      }),
+    });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { status: "unknown", message: body.message || body.error || "Statut introuvable." };
+      const err = body as { error?: string; detail?: string };
+      if (res.status === 401) return { ok: false, error: "Session expirée. Reconnectez-vous puis réessayez." };
+      if (res.status === 429) return { ok: false, error: "Trop de tentatives. Réessayez dans une minute." };
+      return { ok: false, error: err.error || err.detail || "Erreur lors du paiement." };
     }
-    return body as { status: "success" | "failed" | "pending" | "unknown"; message: string };
+    return { ok: true, data: body as ApiPayment };
   } catch {
-    return { status: "unknown", message: "Impossible de vérifier le statut du paiement." };
+    return { ok: false, error: "Erreur réseau. Vérifiez votre connexion et réessayez." };
   }
 }
 
-export async function fetchCardPaymentStatus(): Promise<{ enabled: boolean; provider: string | null }> {
+/** Statut d'un paiement de l'utilisateur connecté (null si introuvable / erreur réseau). */
+export async function fetchPayment(reference: string): Promise<ApiPayment | null> {
   try {
-    const res = await fetch(`${getApiUrl()}/payments/card/status/`);
-    if (!res.ok) return { enabled: false, provider: null };
+    const res = await authFetch(`/payments/${encodeURIComponent(reference)}/`);
+    if (!res.ok) return null;
+    return (await res.json()) as ApiPayment;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchPaymentMethods(): Promise<{ mobile: boolean; card: boolean }> {
+  try {
+    const res = await fetch(`${getApiUrl()}/payments/methods/`);
+    if (!res.ok) return { mobile: false, card: false };
     return res.json();
   } catch {
-    return { enabled: false, provider: null };
+    return { mobile: false, card: false };
   }
 }

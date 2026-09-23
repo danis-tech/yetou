@@ -47,7 +47,7 @@ export default function HomePage() {
   const { checkout, loading: payLoading } = usePayment();
 
   const longPressCaptureToast = useCallback(() => {
-    showToast("Capture interdite. Ce média est protégé par Gabon Pixel.", true);
+    showToast("Capture interdite. Ce média est protégé par Pixia.", true);
   }, [showToast]);
 
   useLongPressGuard(longPressCaptureToast);
@@ -82,6 +82,17 @@ export default function HomePage() {
     params: videoQuery,
     mapItem: mapApiMediaToVideo,
   });
+
+  // Vues du diaporama du hero : 20 photos tirées au hasard, un nouveau tirage à
+  // chaque visite (graine fixée au montage pour que l'ordre reste stable ensuite).
+  const [heroSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
+  const heroSlides = useMemo(() => {
+    const rank = (id: number) => Math.imul(id ^ heroSeed, 2654435761) >>> 0;
+    return filteredPhotos
+      .filter((p) => p.img)
+      .sort((a, b) => rank(a.id) - rank(b.id))
+      .slice(0, 20);
+  }, [filteredPhotos, heroSeed]);
 
   const [buyItem, setBuyItem] = useState<BuyItem | null>(null);
   const [activePayMethod, setActivePayMethod] = useState("Airtel Money");
@@ -135,10 +146,10 @@ export default function HomePage() {
       buyItem,
       mediaId: buyItem.mediaId,
       method: activePayMethod,
-      onLinkOpened: () => showToast(
-        activePayMethod === "Visa" || activePayMethod === "Mastercard"
-          ? "Redirection vers le paiement sécurisé par carte…"
-          : "Finalisez le paiement dans l'onglet SingPay.",
+      phone: clientPhone,
+      onPending: (msg) => showToast(msg),
+      onSuccess: () => showToast(
+        buyItem.plan ? "Abonnement activé !" : "Paiement confirmé ! Votre média est dans vos téléchargements.",
       ),
       onError: (msg) => showToast(msg, true),
     });
@@ -147,11 +158,16 @@ export default function HomePage() {
   };
 
   const selectPlan = (plan: string) => {
+    const img = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80&fit=crop";
     if (plan === "monthly") {
-      openBuy("Abonnement Mensuel", "15 000", "15 000 FCFA/mois", "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80&fit=crop");
+      setBuyItem({ name: "Abonnement Mensuel", price: "15 000", format: "15 000 FCFA/mois", img, plan: "monthly" });
     } else if (plan === "pro") {
-      openBuy("Abonnement Pro", "50 000", "50 000 FCFA/mois", "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80&fit=crop");
+      setBuyItem({ name: "Abonnement Pro", price: "50 000", format: "50 000 FCFA/mois", img, plan: "pro" });
+    } else {
+      return;
     }
+    setActivePayMethod("Airtel Money");
+    setClientPhone("");
   };
 
   const openAuth = (tab: AuthTab) => {
@@ -209,6 +225,7 @@ export default function HomePage() {
         onSearchChange={handleSearchChange}
         onQuickFilter={quickFilter}
         onSearch={handleHeroSearch}
+        slides={heroSlides}
       />
 
       <StatsBar photoCount={photoCount} videoCount={videoCount} />

@@ -1,4 +1,4 @@
-# yétou — Backend Django
+# Pixia — Backend Django
 # Python >= 3.10 recommandé
 
 # ─── Framework ───────────────────────────────────────────────────────────────
@@ -27,3 +27,6 @@ django-environ>=0.11,<1.0
 
 # ─── Images (ImageField — miniatures médias) ─────────────────────────────────
 Pillow>=10.4,<12.0
+
+# ─── Paiement MyPVit (client HTTP) ─────────────────────────────────────────────
+requests>=2.32,<3.0

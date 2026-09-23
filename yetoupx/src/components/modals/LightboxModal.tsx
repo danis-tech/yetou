@@ -20,7 +20,7 @@ export default function LightboxModal({ photo, onClose, onBuy, onCaptureToast }:
           position: "absolute",
           inset: 0,
           backdropFilter: "blur(8px)",
-          background: "rgba(10,10,15,0.85)",
+          background: "rgba(238,241,236,0.85)",
         }}
         onClick={onClose}
       ></div>
@@ -70,7 +70,7 @@ export default function LightboxModal({ photo, onClose, onBuy, onCaptureToast }:
           <div
             style={{
               position: "absolute",
-              color: "#8A8A95",
+              color: "var(--ink-2)",
               fontSize: "14px",
               pointerEvents: "none",
             }}
@@ -103,8 +103,8 @@ export default function LightboxModal({ photo, onClose, onBuy, onCaptureToast }:
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#8A8A95",
-              background: "rgba(20,20,26,0.9)",
+              color: "var(--ink-2)",
+              background: "rgba(248,250,247,0.9)",
               borderRadius: "50%",
               border: "none",
               cursor: "pointer",
@@ -125,13 +125,13 @@ export default function LightboxModal({ photo, onClose, onBuy, onCaptureToast }:
             }}
           >
             <div>
-              <h3 style={{ fontFamily: "Sora,sans-serif", fontWeight: 600, color: "#fff", fontSize: "14px" }}>
+              <h3 style={{ fontFamily: "var(--font)", fontWeight: 600, color: "#fff", fontSize: "14px" }}>
                 {photo.title}
               </h3>
-              <p style={{ color: "#8A8A95", fontSize: "12px" }}>{photo.details}</p>
+              <p style={{ color: "rgba(255,255,255,0.78)", fontSize: "13px" }}>{photo.details}</p>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{ fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "18px", color: "#fff" }}>
+              <div style={{ fontFamily: "var(--font)", fontWeight: 700, fontSize: "18px", color: "#fff" }}>
                 {photo.price}
               </div>
               <button
@@ -144,7 +144,7 @@ export default function LightboxModal({ photo, onClose, onBuy, onCaptureToast }:
                 }}
                 style={{
                   padding: "8px 16px",
-                  background: "#C8371A",
+                  background: "var(--river)",
                   color: "#fff",
                   borderRadius: "8px",
                   border: "none",

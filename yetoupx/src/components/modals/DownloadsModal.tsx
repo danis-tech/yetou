@@ -73,8 +73,8 @@ export default function DownloadsModal({ open, items, onClose, onDownload, remai
               <div
                 key={item.id}
                 style={{
-                  background: "#0A0A0F",
-                  border: "1px solid #2A2A35",
+                  background: "var(--paper)",
+                  border: "1px solid var(--contour)",
                   borderRadius: "10px",
                   padding: "12px",
                   display: "flex",
@@ -97,10 +97,10 @@ export default function DownloadsModal({ open, items, onClose, onDownload, remai
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
-                      fontFamily: "Sora,sans-serif",
+                      fontFamily: "var(--font)",
                       fontSize: "12px",
                       fontWeight: 600,
-                      color: "#F0EFEA",
+                      color: "var(--ink)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -108,10 +108,10 @@ export default function DownloadsModal({ open, items, onClose, onDownload, remai
                   >
                     {item.name}
                   </div>
-                  <div style={{ fontSize: "10px", color: "#8A8A95", marginTop: "2px" }}>
+                  <div style={{ fontSize: "12px", color: "var(--ink-2)", marginTop: "2px" }}>
                     {item.format} · Acheté le {item.date}
                   </div>
-                  <div style={{ fontSize: "10px", color: exhausted ? "#C8371A" : "#8A8A95", marginTop: "2px" }}>
+                  <div style={{ fontSize: "12px", color: exhausted ? "var(--river)" : "var(--ink-2)", marginTop: "2px" }}>
                     {item.downloadCount === 0
                       ? "Jamais téléchargé"
                       : exhausted
@@ -136,7 +136,7 @@ export default function DownloadsModal({ open, items, onClose, onDownload, remai
             );
           })}
           {items.length === 0 && (
-            <div style={{ textAlign: "center", padding: "40px 0", color: "#8A8A95" }}>
+            <div style={{ textAlign: "center", padding: "40px 0", color: "var(--ink-2)" }}>
               <i className="ti ti-inbox" style={{ fontSize: "32px", display: "block", marginBottom: "8px" }}></i>
               Aucun achat confirmé pour le moment
             </div>

@@ -43,21 +43,27 @@ export default function AuthModal({ open, authTab, onClose, onSwitchTab, googleL
     }
   };
 
+  const [acceptTerms, setAcceptTerms] = useState(false);
+
   const handleRegister = async () => {
     if (!name || !email || !password) {
       showToast("Veuillez remplir tous les champs.", true);
+      return;
+    }
+    if (!acceptTerms) {
+      showToast("Cochez la case pour accepter les conditions d'utilisation et la politique de confidentialité.", true);
       return;
     }
     if (password !== confirmPassword) {
       showToast("Les mots de passe ne correspondent pas.", true);
       return;
     }
-    if (password.length < 6) {
-      showToast("Le mot de passe doit contenir au moins 6 caractères.", true);
+    if (password.length < 8) {
+      showToast("Le mot de passe doit contenir au moins 8 caractères.", true);
       return;
     }
     setIsSubmitting(true);
-    const result = await register(name, email, password);
+    const result = await register(name, email, password, acceptTerms);
     setIsSubmitting(false);
 
     if (result.success) {
@@ -126,7 +132,7 @@ export default function AuthModal({ open, authTab, onClose, onSwitchTab, googleL
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
               <label
                 onClick={() => setRememberMe(!rememberMe)}
-                style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "12px", color: "#8A8A95" }}
+                style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "12px", color: "var(--ink-2)" }}
               >
                 <input
                   type="checkbox"
@@ -136,7 +142,7 @@ export default function AuthModal({ open, authTab, onClose, onSwitchTab, googleL
                 />
                 Se souvenir de moi
               </label>
-              <a style={{ color: "#C8371A", fontSize: "12px", cursor: "pointer" }}>Mot de passe oublié ?</a>
+              <a style={{ color: "var(--river)", fontSize: "12px", cursor: "pointer" }}>Mot de passe oublié ?</a>
             </div>
             <button className="btn-auth" onClick={handleLogin} disabled={isSubmitting}>
               {isSubmitting ? "Connexion en cours..." : "Se connecter"}
@@ -146,8 +152,8 @@ export default function AuthModal({ open, authTab, onClose, onSwitchTab, googleL
               onClick={handleGoogleLogin}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
-                gap: "8px", padding: "10px", border: "1px solid #2A2A35",
-                borderRadius: "8px", background: "transparent", color: "#F0EFEA",
+                gap: "8px", padding: "10px", border: "1px solid var(--contour)",
+                borderRadius: "8px", background: "transparent", color: "var(--ink)",
                 width: "100%", cursor: "pointer", fontSize: "13px",
               }}
             >
@@ -181,7 +187,7 @@ export default function AuthModal({ open, authTab, onClose, onSwitchTab, googleL
               <label>Mot de passe</label>
               <input
                 type="password"
-                placeholder="6 caractères minimum"
+                placeholder="8 caractères minimum"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -195,11 +201,14 @@ export default function AuthModal({ open, authTab, onClose, onSwitchTab, googleL
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
-            <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer", fontSize: "12px", color: "#8A8A95", marginBottom: "16px" }}>
-              <input type="checkbox" style={{ width: "16px", height: "16px", marginTop: "2px" }} />
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer", fontSize: "12px", color: "var(--ink-2)", marginBottom: "16px" }}>
+              <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)}
+                style={{ width: "16px", height: "16px", marginTop: "2px", accentColor: "var(--river)" }} />
               <span>
-                J&apos;accepte les <a style={{ color: "#C8371A" }}>conditions d&apos;utilisation</a> et la{" "}
-                <a style={{ color: "#C8371A" }}>politique de confidentialité</a>
+                J&apos;accepte les{" "}
+                <a href="/conditions" target="_blank" rel="noopener" style={{ color: "var(--river)", textDecoration: "underline" }}>conditions d&apos;utilisation</a>{" "}
+                et la{" "}
+                <a href="/confidentialite" target="_blank" rel="noopener" style={{ color: "var(--river)", textDecoration: "underline" }}>politique de confidentialité</a>
               </span>
             </label>
             <button className="btn-auth" onClick={handleRegister} disabled={isSubmitting}>
@@ -210,13 +219,19 @@ export default function AuthModal({ open, authTab, onClose, onSwitchTab, googleL
               onClick={handleGoogleLogin}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
-                gap: "8px", padding: "10px", border: "1px solid #2A2A35",
-                borderRadius: "8px", background: "transparent", color: "#F0EFEA",
+                gap: "8px", padding: "10px", border: "1px solid var(--contour)",
+                borderRadius: "8px", background: "transparent", color: "var(--ink)",
                 width: "100%", cursor: "pointer", fontSize: "13px",
               }}
             >
               <img src={googleLogoSrc} alt="Google" style={{ width: "18px", height: "18px" }} /> S&apos;inscrire avec Google
             </button>
+            <p style={{ fontSize: "12px", color: "var(--ink-3)", marginTop: "10px", textAlign: "center" }}>
+              En continuant avec Google, vous acceptez les{" "}
+              <a href="/conditions" target="_blank" rel="noopener" style={{ textDecoration: "underline" }}>conditions d&apos;utilisation</a>{" "}
+              et la{" "}
+              <a href="/confidentialite" target="_blank" rel="noopener" style={{ textDecoration: "underline" }}>politique de confidentialité</a>.
+            </p>
           </div>
         )}
       </div>

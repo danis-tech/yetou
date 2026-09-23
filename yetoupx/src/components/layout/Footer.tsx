@@ -14,11 +14,11 @@ export default function Footer({ onSwitchTab, onSetPhotoCat, onOpenAuth }: Foote
       <div className="footer-grid">
         <div>
           <div className="footer-logo">
-            Gabon <em>Pixel</em>
+            Pixia
           </div>
           <p className="footer-desc">
             Plateforme de vente de médias aériens HD &amp; 4K,<br />
-            développée par Best Aero Drone · Libreville, Gabon.<br />
+            développée par Agenxia · Libreville, Gabon.<br />
             Paysages, culture, nature et événements gabonais<br />
             capturés par drone professionnel.
           </p>
@@ -36,6 +36,8 @@ export default function Footer({ onSwitchTab, onSetPhotoCat, onOpenAuth }: Foote
           <a onClick={() => onOpenAuth("register")}>Créer un compte</a>
           <a onClick={() => onOpenAuth("login")}>Se connecter</a>
           <a onClick={() => onSwitchTab("tarifs")}>Abonnements</a>
+          <a href="/contribuer">Devenir contributeur</a>
+          <a href="/contributeur">Espace contributeur</a>
           <a>Mes téléchargements</a>
           <a>Mes factures</a>
         </div>
@@ -44,13 +46,14 @@ export default function Footer({ onSwitchTab, onSetPhotoCat, onOpenAuth }: Foote
           <a>contact@bestaerogroup.com</a>
           <a>Libreville, Gabon</a>
           <a>+241 XX XX XX XX</a>
-          <a>Conditions d&apos;utilisation</a>
-          <a>Politique de confidentialité</a>
+          <a href="/conditions">Conditions d&apos;utilisation</a>
+          <a href="/confidentialite">Politique de confidentialité</a>
+          <a href="/charte-contributeurs">Charte des contributeurs</a>
         </div>
       </div>
       <div className="footer-bottom">
-        <span>© 2026 Best Aero Drone · Tous droits réservés · Gabon</span>
-        <span>Gabon Pixel — Plateforme de médias aériens HD</span>
+        <span>© 2026 Agenxia · Tous droits réservés · Gabon</span>
+        <span>Pixia — Plateforme de médias aériens HD</span>
       </div>
     </footer>
   );

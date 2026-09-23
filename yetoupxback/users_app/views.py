@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import redirect
 from django.db.models import Sum, Count
 from rest_framework import status
@@ -100,17 +101,30 @@ def notifications_mark_all_read(request):
     return Response({"updated": updated})
 
 
+def _safe_frontend_url(requested: str) -> str:
+    """N'autorise la redirection (qui transporte les JWT) que vers le frontend
+    configuré ou une origine CORS autorisée — sinon n'importe quel site pourrait
+    récupérer les jetons via ?frontend=https://site-malveillant."""
+    default = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    allowed = {default} | {o.rstrip("/") for o in getattr(settings, "CORS_ALLOWED_ORIGINS", []) if o}
+    candidate = (requested or "").rstrip("/")
+    return candidate if candidate in allowed else default
+
+
 def google_callback(request):
     """Callback après OAuth Google. Redirige vers le frontend avec le JWT."""
-    from django.conf import settings
-    frontend = request.GET.get("frontend") or getattr(settings, "FRONTEND_URL", "http://localhost:3000")
-    frontend = frontend.rstrip("/")
+    frontend = _safe_frontend_url(request.GET.get("frontend", ""))
 
     if request.user.is_authenticated:
         tokens = get_tokens_for_user(request.user)
         if not request.user.name and request.user.email:
             request.user.name = request.user.email.split("@")[0]
             request.user.save(update_fields=["name"])
+        if not request.user.terms_accepted_at:
+            # Le bouton Google indique qu'en continuant, on accepte les conditions.
+            from django.utils import timezone
+            request.user.terms_accepted_at = timezone.now()
+            request.user.save(update_fields=["terms_accepted_at"])
         return redirect(f"{frontend}/auth/callback?access={tokens['access']}&refresh={tokens['refresh']}")
 
     return redirect(f"{frontend}/auth/callback?error=auth_failed")

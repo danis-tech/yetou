@@ -39,7 +39,7 @@ export default function UnitTable() {
           <div className="unit-type">
             <i className="ti ti-video"></i>
             <div>
-              <div className="unit-type-name">Vidéo drone — {row.quality_display}</div>
+              <div className="unit-type-name">Vidéo drone {row.quality_display}</div>
               <div className="unit-type-desc">{row.description || "MP4 · H.264"}</div>
             </div>
           </div>
@@ -50,9 +50,9 @@ export default function UnitTable() {
       ))}
       <div className="unit-row highlight">
         <div className="unit-type">
-          <i className="ti ti-star" style={{ color: "#C8371A" }}></i>
+          <i className="ti ti-star" style={{ color: "var(--river)" }}></i>
           <div>
-            <div className="unit-type-name" style={{ color: "#C8371A" }}>Abonnement mensuel</div>
+            <div className="unit-type-name" style={{ color: "var(--river)" }}>Abonnement mensuel</div>
             <div className="unit-type-desc">Photos illimitées HD &amp; 4K</div>
           </div>
         </div>
@@ -62,9 +62,9 @@ export default function UnitTable() {
       </div>
       <div className="unit-row highlight">
         <div className="unit-type">
-          <i className="ti ti-crown" style={{ color: "#C8371A" }}></i>
+          <i className="ti ti-crown" style={{ color: "var(--river)" }}></i>
           <div>
-            <div className="unit-type-name" style={{ color: "#C8371A" }}>Abonnement professionnel</div>
+            <div className="unit-type-name" style={{ color: "var(--river)" }}>Abonnement professionnel</div>
             <div className="unit-type-desc">Photos + Vidéos illimitées</div>
           </div>
         </div>

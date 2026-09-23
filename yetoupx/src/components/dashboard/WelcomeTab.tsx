@@ -94,7 +94,7 @@ export default function WelcomeTab({
         <div>
           <h2 className="dash-h2">Bonjour, {userName.split(" ")[0]} 👋</h2>
           <p className="dash-sub dash-sub--flush">
-            Bienvenue dans votre espace Gabon Pixel
+            Bienvenue dans votre espace Pixia
             {createdAt ? ` · membre depuis ${new Date(createdAt).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}` : ""}
           </p>
         </div>

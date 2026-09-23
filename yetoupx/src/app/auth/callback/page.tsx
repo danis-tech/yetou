@@ -34,8 +34,8 @@ function CallbackHandler() {
         return;
       }
 
-      const returnUrl = localStorage.getItem("yetou_return_url");
-      localStorage.removeItem("yetou_return_url");
+      const returnUrl = localStorage.getItem("pixia_return_url");
+      localStorage.removeItem("pixia_return_url");
       try {
         if (returnUrl) {
           const url = new URL(returnUrl);
@@ -52,8 +52,8 @@ function CallbackHandler() {
   if (error) {
     return (
       <>
-        <i className="ti ti-alert-triangle" style={{ fontSize: "40px", color: "#C8371A" }}></i>
-        <p style={{ color: "#8A8A95", fontSize: "14px" }}>{error}</p>
+        <i className="ti ti-alert-triangle" style={{ fontSize: "40px", color: "var(--danger)" }}></i>
+        <p style={{ color: "var(--ink-2)", fontSize: "14px" }}>{error}</p>
       </>
     );
   }
@@ -62,10 +62,10 @@ function CallbackHandler() {
     <>
       <div style={{
         width: "48px", height: "48px", borderRadius: "50%",
-        border: "3px solid #2A2A35", borderTopColor: "#C8371A",
+        border: "3px solid var(--contour)", borderTopColor: "var(--river)",
         animation: "spin 0.8s linear infinite",
       }} />
-      <p style={{ color: "#8A8A95", fontSize: "14px" }}>Connexion en cours...</p>
+      <p style={{ color: "var(--ink-2)", fontSize: "14px" }}>Connexion en cours...</p>
     </>
   );
 }
@@ -73,7 +73,7 @@ function CallbackHandler() {
 export default function AuthCallbackPage() {
   return (
     <div style={{
-      minHeight: "100vh", background: "#0A0A0F", display: "flex",
+      minHeight: "100vh", background: "var(--paper)", display: "flex",
       flexDirection: "column", alignItems: "center", justifyContent: "center",
       padding: "40px", gap: "16px",
     }}>

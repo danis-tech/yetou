@@ -51,11 +51,11 @@ export default function PhotoGrid({
       <div className="section-hd">
         <h2>
           Photos disponibles{" "}
-          <span style={{ fontSize: "13px", color: "#8A8A95", fontWeight: 400 }}>
+          <span style={{ fontSize: "13px", color: "var(--ink-2)", fontWeight: 400 }}>
             ({resultCount ?? photos.length} résultats)
           </span>
         </h2>
-        <span onClick={onGoTarifs}>Voir les tarifs →</span>
+        <span onClick={onGoTarifs}>Voir les tarifs</span>
       </div>
       <MediaCarouselRows
         items={photos}

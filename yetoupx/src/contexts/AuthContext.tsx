@@ -18,7 +18,7 @@ interface AuthContextValue {
   isLoading: boolean;
   purchasedItems: PurchasedItem[];
   login: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; message: string }>;
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  register: (name: string, email: string, password: string, acceptTerms: boolean) => Promise<{ success: boolean; message: string }>;
   loginWithGoogle: () => void;
   completeSession: (access: string, refresh: string) => Promise<boolean>;
   logout: () => void;
@@ -30,10 +30,10 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = "yetou_user";
-const PURCHASES_KEY = "yetou_purchases";
-const TOKEN_KEY = "yetou_token";
-const REFRESH_KEY = "yetou_refresh";
+const STORAGE_KEY = "pixia_user";
+const PURCHASES_KEY = "pixia_purchases";
+const TOKEN_KEY = "pixia_token";
+const REFRESH_KEY = "pixia_refresh";
 
 function loadUser(): User | null {
   if (typeof window === "undefined") return null;
@@ -192,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [completeSession]);
 
-  const register = useCallback(async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
+  const register = useCallback(async (name: string, email: string, password: string, acceptTerms: boolean): Promise<{ success: boolean; message: string }> => {
     try {
       const res = await fetch(`${getApiUrl()}/auth/register/`, {
         method: "POST",
@@ -202,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: email.trim().toLowerCase(),
           password1: password,
           password2: password,
+          accept_terms: acceptTerms,
         }),
       });
       const data = await res.json();
@@ -221,7 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginWithGoogle = useCallback(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("yetou_return_url", window.location.href);
+      localStorage.setItem("pixia_return_url", window.location.href);
     }
     const djangoUrl = getDjangoUrl();
     const frontendUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;

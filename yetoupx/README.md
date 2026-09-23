@@ -1,7 +1,7 @@
-# yétou — Médias aériens HD & 4K · Gabon
+# Pixia — Médias aériens HD & 4K · Gabon
 
 Plateforme de vente de photos et vidéos aériennes capturées par drone professionnel.
-Développée par **Best Aero Drone · Libreville, Gabon**.
+Développée par **Agenxia · Libreville, Gabon**.
 
 ## Architecture
 
@@ -120,4 +120,4 @@ Configuration CORS requise sur le bucket pour autoriser le frontend.
 
 ## Licence
 
-© 2026 Best Aero Drone · Tous droits réservés · Gabon
+© 2026 Agenxia · Tous droits réservés · Gabon

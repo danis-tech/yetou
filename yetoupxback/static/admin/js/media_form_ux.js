@@ -9,7 +9,7 @@
     /* ─── Aperçu instantané des fichiers sélectionnés (avant même l'enregistrement) ─── */
     function buildPreviewBox(input) {
       var box = document.createElement("div");
-      box.className = "yetou-input-preview";
+      box.className = "pixia-input-preview";
       box.style.cssText = "margin-top:10px;display:none";
       input.insertAdjacentElement("afterend", box);
       return box;

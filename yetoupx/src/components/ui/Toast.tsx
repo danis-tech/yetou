@@ -12,15 +12,15 @@ export default function Toast({ message, visible, isError }: ToastProps) {
       className={`toast ${visible ? "show" : ""}`}
       style={
         isError
-          ? { borderColor: "#C8371A", background: "#1a0e0b" }
+          ? { borderColor: "var(--danger)", background: "#F7E7E3" }
           : {}
       }
     >
       <i
         className={isError ? "ti ti-alert-triangle" : "ti ti-circle-check"}
-        style={isError ? { color: "#C8371A" } : {}}
+        style={isError ? { color: "var(--danger)" } : {}}
       ></i>
-      <span style={isError ? { color: "#ff6b6b" } : {}}>{message}</span>
+      <span style={isError ? { color: "var(--ink)" } : {}}>{message}</span>
     </div>
   );
 }

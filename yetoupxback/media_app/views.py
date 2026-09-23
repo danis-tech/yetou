@@ -1,31 +1,36 @@
-import hmac
-import hashlib
+import ipaddress
 import logging
-import time
 
-from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.response import Response
-from django.db.models import Count, Exists, OuterRef
-from django.shortcuts import get_object_or_404
 from django.conf import settings
-from .models import Media, MediaLike, Purchase, PaymentLog, PaymentSession, PricingConfig, Quality
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.db.models import Count, Exists, F, OuterRef
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action, api_view, authentication_classes, permission_classes, throttle_classes
+from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
+
+from . import mypvit
 from .filters import apply_media_filters, apply_media_order
+from .models import Media, MediaLike, PaymentSession, PricingConfig, Purchase, Quality
 from .pagination import MediaPagination
-from .fedapay import (
-    create_payment as create_fedapay_payment,
-    verify_transaction,
-    is_configured as fedapay_configured,
-    fcfa_to_usd,
-)
-from .serializers import (
-    MediaListSerializer, MediaDetailSerializer,
-    PurchaseSerializer, CreatePurchaseSerializer, _public_file_url,
-)
+from .payments import confirm_payment, friendly_failure_reason, initiate_payment, reconcile_session
+from .serializers import MediaDetailSerializer, MediaListSerializer, PurchaseSerializer
 
 logger = logging.getLogger(__name__)
 
-PLAN_DOWNLOADS = {"none": 1, "monthly": 10, "pro": -1}
+# Durée de validité du lien de téléchargement signé (secondes).
+DOWNLOAD_URL_TTL = 300
+
+
+class PaymentInitiateThrottle(UserRateThrottle):
+    scope = "payments"
+
+
+class PaymentStatusThrottle(UserRateThrottle):
+    scope = "payment_status"
 
 
 class MediaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -44,7 +49,7 @@ class MediaViewSet(viewsets.ReadOnlyModelViewSet):
         return context
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().select_related("contributor__contributor_profile")
         qs = apply_media_filters(qs, self.request.query_params)
         qs = qs.annotate(likes_count=Count("likes", distinct=True))
 
@@ -95,73 +100,37 @@ def pricing_table(request):
     return Response({"qualities": qualities, "pricing": pricing})
 
 
-class PurchaseViewSet(viewsets.ModelViewSet):
+class PurchaseViewSet(viewsets.ReadOnlyModelViewSet):
+    """Achats de l'utilisateur, en lecture seule : un achat n'est créé QUE par
+    la confirmation d'un paiement (media_app.payments.confirm_payment)."""
+
     serializer_class = PurchaseSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Purchase.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-    def create(self, request, *args, **kwargs):
-        serializer = CreatePurchaseSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        media = get_object_or_404(Media, id=serializer.validated_data["media_id"], status="published")
-        user = request.user
-
-        payment_reference = serializer.validated_data.get("payment_reference", "")
-        if payment_reference:
-            # Sync session & log status if reference exists
-            session = PaymentSession.objects.filter(reference=payment_reference).first()
-            if session:
-                _complete_payment_session(session, log_message="Achat confirmé")
-            else:
-                PaymentSession.objects.filter(reference=payment_reference).update(status="success")
-                PaymentLog.objects.filter(reference=payment_reference).update(status="success", message="Paiement confirmé")
-
-            # Idempotence : si le webhook (ou un appel précédent) a déjà créé l'achat
-            # pour cette référence, on le renvoie tel quel au lieu d'en recréer un.
-            existing = Purchase.objects.filter(user=user, payment_reference=payment_reference).first()
-            if existing:
-                return Response(PurchaseSerializer(existing).data, status=200)
-
-        max_dl = PLAN_DOWNLOADS.get(user.plan, 1)
-        if max_dl == -1:
-            max_dl = 999
-
-        purchase = Purchase.objects.create(
-            user=user, media=media, price=media.price, max_downloads=max_dl,
-            payment_method=serializer.validated_data.get("payment_method", ""),
-            payment_reference=serializer.validated_data.get("payment_reference", ""),
-            payment_status=serializer.validated_data.get("payment_status", "success") or "success",
-        )
-        if payment_reference:
-            PaymentSession.objects.filter(reference=payment_reference).update(status="success", purchase=purchase)
-            PaymentLog.objects.filter(reference=payment_reference).update(status="success")
-
-        from users_app.notifications import notify_purchase
-        if purchase.payment_status in ("success", "simulated", "failed", "pending"):
-            notify_purchase(user, purchase)
-        return Response(PurchaseSerializer(purchase).data, status=status.HTTP_201_CREATED)
+        return Purchase.objects.filter(user=self.request.user).select_related("media")
 
     @action(detail=True, methods=["post"])
     def download(self, request, pk=None):
         purchase = get_object_or_404(Purchase, id=pk, user=request.user)
 
-        if purchase.payment_status not in ("success", "simulated"):
+        if purchase.payment_status not in Purchase.PAID_STATUSES:
             return Response(
                 {"error": "Le téléchargement n'est disponible qu'après confirmation du paiement."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        media_file = purchase.media.file
+        if not media_file:
+            return Response({"error": "Fichier indisponible. Contactez le support."}, status=404)
 
-        if purchase.download_count >= purchase.max_downloads:
+        # Incrément atomique : deux requêtes simultanées ne peuvent pas dépasser le quota.
+        updated = Purchase.objects.filter(
+            id=purchase.id, download_count__lt=F("max_downloads"),
+        ).update(download_count=F("download_count") + 1)
+        if not updated:
             return Response({"error": "Limite de téléchargements atteinte."}, status=400)
-
-        purchase.download_count += 1
-        purchase.save(update_fields=["download_count"])
+        Media.objects.filter(id=purchase.media_id).update(downloads=F("downloads") + 1)
+        purchase.refresh_from_db(fields=["download_count"])
 
         remaining = purchase.remaining_downloads
         if remaining == 1:
@@ -175,7 +144,16 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                 metadata={"purchase_id": purchase.id, "remaining": 1},
             )
 
-        file_url = _public_file_url(purchase.media.file)
+        filename = media_file.name.rsplit("/", 1)[-1]
+        try:
+            # URL signée à durée de vie courte (jamais l'URL publique permanente).
+            file_url = media_file.storage.url(
+                media_file.name,
+                parameters={"ResponseContentDisposition": f'attachment; filename="{filename}"'},
+                expire=DOWNLOAD_URL_TTL,
+            )
+        except TypeError:  # stockage local (dev) sans URL signée
+            file_url = media_file.url
         return Response({
             "message": "Téléchargement autorisé.",
             "url": file_url,
@@ -183,466 +161,178 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         })
 
 
-@api_view(["POST"])
+# ─── Paiements MyPVit ────────────────────────────────────────────────────────
+
+def _session_payload(session: PaymentSession, user) -> dict:
+    if session.status == "success":
+        message = "Paiement confirmé avec succès."
+    elif session.status == "failed":
+        message = friendly_failure_reason(session.failure_reason)
+    elif session.redirect_url:
+        message = "Finalisez le paiement sur le formulaire carte sécurisé."
+    else:
+        message = "Validez le paiement sur votre téléphone (code PIN)."
+    return {
+        "reference": session.reference,
+        "status": session.status,
+        "message": message,
+        "method": session.method,
+        "amount_fcfa": session.amount_fcfa,
+        "media_id": session.media_id,
+        "plan": session.plan,
+        "purchase_id": session.purchase_id,
+        "redirect_url": session.redirect_url if session.status == "pending" else "",
+        "user_plan": user.active_plan,
+        "plan_expires_at": user.plan_expires_at,
+    }
+
+
+@api_view(["GET"])
 @permission_classes([permissions.AllowAny])
-def log_payment(request):
-    secret = request.headers.get("X-Internal-Secret", "")
-    expected = getattr(settings, "INTERNAL_API_SECRET", "")
-    if secret != expected:
-        return Response({"error": "Non autorisé."}, status=403)
+def payment_methods(request):
+    """Moyens de paiement actuellement disponibles."""
+    return Response({
+        "mobile": mypvit.is_configured(),
+        "card": mypvit.card_is_configured(),
+    })
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+@throttle_classes([PaymentInitiateThrottle])
+def payment_initiate(request):
+    """
+    Initie un paiement MyPVit. Corps : { media_id? | plan?, method, phone }.
+    - Mobile Money : un push USSD est envoyé au téléphone ; le frontend sonde
+      ensuite GET /api/payments/<reference>/.
+    - Carte : la réponse contient `redirect_url` (formulaire bancaire PVit).
+    Le montant est calculé côté serveur.
+    """
+    if not mypvit.is_configured():
+        return Response({"error": "Le paiement est momentanément indisponible."}, status=503)
+
+    method = str(request.data.get("method", "")).strip()
+    phone = str(request.data.get("phone", "")).strip()
+    plan = str(request.data.get("plan", "") or "").strip()
+    media_id = request.data.get("media_id")
+
+    media = None
+    if media_id not in (None, "", 0):
+        try:
+            media = Media.objects.get(id=int(media_id), status="published")
+        except (Media.DoesNotExist, TypeError, ValueError):
+            return Response({"error": "Média introuvable."}, status=404)
 
     try:
-        PaymentLog.objects.create(
-            amount=request.data.get("amount", 0),
-            method=request.data.get("method", "Airtel Money"),
-            reference=request.data.get("reference", ""),
-            phone=request.data.get("phone", ""),
-            status=request.data.get("status", "success"),
-            message=request.data.get("message", ""),
-            transaction_id=request.data.get("transaction_id", ""),
-        )
-        return Response({"success": True}, status=201)
-    except Exception as e:
-        return Response({"error": str(e)}, status=400)
-
-
-FAILURE_REASON_MAP = (
-    ("insuffi", "Solde insuffisant sur votre compte mobile money."),
-    ("mot de passe", "Mot de passe / code PIN incorrect."),
-    ("pin", "Mot de passe / code PIN incorrect."),
-    ("incorrect", "Mot de passe / code PIN incorrect."),
-    ("invalid", "Informations de paiement invalides."),
-    ("annul", "Paiement annulé."),
-    ("cancel", "Paiement annulé."),
-    ("refus", "Paiement refusé par votre opérateur."),
-    ("declin", "Paiement refusé par votre opérateur."),
-    ("reject", "Paiement refusé par votre opérateur."),
-    ("timeout", "Le délai de paiement a expiré. Veuillez réessayer."),
-    ("expir", "Le délai de paiement a expiré. Veuillez réessayer."),
-)
-
-
-def _friendly_failure_reason(raw_message: str) -> str:
-    lowered = (raw_message or "").lower()
-    for marker, friendly in FAILURE_REASON_MAP:
-        if marker in lowered:
-            return friendly
-    return raw_message or "Le paiement a échoué ou a été annulé."
-
-
-@api_view(["GET"])
-@permission_classes([permissions.AllowAny])
-def payment_status_check(request):
-    """
-    Consultation publique du statut réel d'un paiement (SingPay ou FedaPay)
-    à partir de sa référence — utilisé par la page /paiement/retour pour
-    afficher un message explicite (succès, solde insuffisant, PIN erroné...).
-    """
-    reference = str(request.query_params.get("reference", "")).strip()
-    if not reference:
-        return Response({"error": "reference requise."}, status=400)
-
-    log = PaymentLog.objects.filter(reference=reference).order_by("-created_at").first()
-    if not log:
-        return Response({"status": "unknown", "message": "Référence introuvable."}, status=404)
-
-    if log.status == "success":
-        return Response({"status": "success", "message": "Paiement confirmé avec succès."})
-    if log.status == "failed":
-        return Response({"status": "failed", "message": _friendly_failure_reason(log.message)})
-    return Response({"status": "pending", "message": "Paiement en attente de confirmation."})
-
-
-@api_view(["POST"])
-@permission_classes([permissions.AllowAny])
-def singpay_webhook(request):
-    """
-    Endpoint webhook pour les notifications asynchrones de SingPay.
-
-    SingPay envoie une requête POST quand le statut d'un paiement change
-    (ex: l'utilisateur a validé ou refusé sur son téléphone).
-
-    Sécurité : vérification HMAC-SHA256 avec SINGPAY_WEBHOOK_SECRET.
-    Si le secret n'est pas configuré, on accepte quand même (mode dev)
-    mais on logue un avertissement.
-
-    Corps attendu (SingPay) :
-    {
-      "reference": "YETOU-...",
-      "status": "SUCCESS" | "FAILED" | "PENDING",
-      "transaction_id": "...",
-      "amount": 1500,
-      "client_msisdn": "077000000"
-    }
-    """
-    webhook_secret = getattr(settings, "SINGPAY_WEBHOOK_SECRET", "")
-
-    # ── Vérification signature HMAC ────────────────────────────────────
-    if webhook_secret:
-        sig_header = request.headers.get("X-SingPay-Signature", "")
-        raw_body = request.body
-        expected_sig = hmac.new(
-            webhook_secret.encode(),
-            raw_body,
-            hashlib.sha256,
-        ).hexdigest()
-        if not hmac.compare_digest(sig_header, expected_sig):
-            logger.warning("SingPay webhook: signature invalide.")
-            return Response({"error": "Signature invalide."}, status=403)
-    else:
-        logger.warning("SingPay webhook reçu sans SINGPAY_WEBHOOK_SECRET configuré.")
-
-    data = request.data
-    logger.info("SingPay webhook payload brut: %s", dict(data) if hasattr(data, "keys") else data)
-
-    # SingPay imbrique les infos utiles dans "transaction" et le résultat API
-    # dans "status" (objet, pas une simple chaîne "SUCCESS"/"FAILED").
-    transaction = data.get("transaction") if isinstance(data.get("transaction"), dict) else {}
-    status_obj = data.get("status") if isinstance(data.get("status"), dict) else {}
-
-    reference = transaction.get("reference") or data.get("reference", "")
-    transaction_id = str(
-        transaction.get("airtel_money_id")
-        or transaction.get("moov_money_id")
-        or transaction.get("_id")
-        or transaction.get("id")
-        or data.get("transaction_id", "")
-        or ""
-    )
-    amount = transaction.get("amount", data.get("amount", 0))
-    phone = str(transaction.get("client_msisdn", data.get("client_msisdn", "")))
-
-    tx_lifecycle = str(transaction.get("status", "")).strip().lower()
-    tx_result = str(transaction.get("result", "")).strip()
-    api_message = str(status_obj.get("message", "")).strip()
-
-    failure_markers = (
-        "error", "fail", "insuffi", "cancel", "annul", "reject",
-        "invalid", "incorrect", "timeout", "expir", "declin", "refus",
-    )
-    text_to_check = f"{tx_result} {api_message}".lower()
-    is_failure = any(marker in text_to_check for marker in failure_markers)
-
-    if is_failure:
-        singpay_status = "FAILED"
-    elif tx_result and tx_lifecycle in ("terminate", "success", "completed", "done", "paid"):
-        singpay_status = "SUCCESS"
-    else:
-        singpay_status = "PENDING"
-
-    logger.info(
-        "SingPay webhook: ref=%s status=%s tx=%s result=%s message=%s",
-        reference, singpay_status, transaction_id, tx_result, api_message,
-    )
-
-    # SingPay indique le vrai moyen utilisé (le client peut choisir Airtel, Moov
-    # ou PayPal sur leur page hébergée, indépendamment de ce qu'on a présélectionné).
-    method_map = {"airtel": "Airtel Money", "moov": "Moov Money", "paypal": "PayPal"}
-    real_method = method_map.get(str(transaction.get("type", "")).strip().lower())
-
-    # ── Mettre à jour le PaymentLog si il existe ───────────────────────
-    log_status = {"SUCCESS": "success", "FAILED": "failed"}.get(singpay_status, "pending")
-    update_fields = {
-        "status": log_status,
-        "transaction_id": transaction_id or PaymentLog.objects.filter(
-            reference=reference,
-        ).values_list("transaction_id", flat=True).first() or "",
-        "message": f"Webhook SingPay: {singpay_status} — {api_message}"[:500],
-        "raw_payload": data if hasattr(data, "keys") else None,
-    }
-    if real_method:
-        update_fields["method"] = real_method
-    PaymentLog.objects.filter(reference=reference).update(**update_fields)
-
-    # ── Session de paiement mobile (créée par /api/payments/singpay/initiate/) ──
-    # C'est le chemin fiable : user + média/plan connus dès l'initiation.
-    session = (
-        PaymentSession.objects.filter(reference=reference, provider="singpay")
-        .select_related("user", "media")
-        .first()
-    ) if reference else None
-
-    if session and singpay_status == "SUCCESS":
-        _complete_payment_session(session, transaction_id, f"Webhook SingPay: {api_message}"[:500])
-    elif session and singpay_status == "FAILED":
-        session.status = "failed"
-        session.save(update_fields=["status"])
-
-    # ── Filet de sécurité pour les achats créés sans session (legacy / hors-ligne) ──
-    if reference and not session:
-        from users_app.notifications import notify_purchase
-
-        if singpay_status == "SUCCESS":
-            updated = Purchase.objects.filter(
-                payment_reference=reference,
-                payment_status="pending",
-            )
-            for purchase in updated.select_related("media", "user"):
-                purchase.payment_status = "success"
-                purchase.save(update_fields=["payment_status"])
-                notify_purchase(purchase.user, purchase)
-        elif singpay_status == "FAILED":
-            failed = Purchase.objects.filter(
-                payment_reference=reference,
-                payment_status="pending",
-            ).select_related("media", "user")
-            for purchase in failed:
-                purchase.payment_status = "failed"
-                purchase.save(update_fields=["payment_status"])
-                notify_purchase(purchase.user, purchase)
-
-    return Response({"received": True}, status=200)
-
-
-def _complete_payment_session(session: PaymentSession, transaction_id: str = "", log_message: str = "") -> None:
-    """Finalise achat ou abonnement après paiement (carte ou mobile) confirmé."""
-    if session.status == "success":
-        return
-
-    session.status = "success"
-    session.save(update_fields=["status"])
-
-    PaymentLog.objects.filter(reference=session.reference).update(
-        status="success",
-        message=log_message or "Paiement confirmé",
-        transaction_id=transaction_id or "",
-    )
-
-    user = session.user
-
-    if session.media_id:
-        # Idempotence : le frontend peut avoir déjà créé l'achat (retour client)
-        # avant l'arrivée du webhook (ou inversement) — on ne le duplique pas.
-        purchase = Purchase.objects.filter(user=user, payment_reference=session.reference).first()
-        if not purchase:
-            max_dl = PLAN_DOWNLOADS.get(user.plan, 1)
-            if max_dl == -1:
-                max_dl = 999
-
-            purchase = Purchase.objects.create(
-                user=user,
-                media=session.media,
-                price=session.amount_fcfa,
-                max_downloads=max_dl,
-                payment_method=session.method,
-                payment_reference=session.reference,
-                payment_status="success",
-            )
-            from users_app.notifications import notify_purchase
-            notify_purchase(user, purchase)
-        elif purchase.payment_status != "success":
-            purchase.payment_status = "success"
-            purchase.save(update_fields=["payment_status"])
-
-        session.purchase = purchase
-        session.save(update_fields=["purchase"])
-
-    elif session.plan in ("monthly", "pro"):
-        old_plan = user.plan
-        user.plan = session.plan
-        user.save(update_fields=["plan"])
-        from users_app.notifications import notify_plan_change
-        notify_plan_change(user, old_plan, session.plan)
-
-
-@api_view(["GET"])
-@permission_classes([permissions.AllowAny])
-def card_payment_status(request):
-    """Indique si le paiement carte (FedaPay) est prêt."""
-    return Response({
-        "enabled": fedapay_configured(),
-        "provider": "fedapay" if fedapay_configured() else None,
-    })
-
-
-@api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
-def fedapay_initiate(request):
-    """
-    Paiement carte via FedaPay (Visa / Mastercard — formulaire bancaire).
-    Corps : { media_id?, amount_fcfa, method: "Visa"|"Mastercard", plan? }
-    """
-    if not fedapay_configured():
+        session = initiate_payment(user=request.user, method=method, phone=phone, media=media, plan=plan)
+    except ValidationError as exc:
+        return Response({"error": " ".join(exc.messages)}, status=400)
+    except mypvit.MyPvitError as exc:
+        logger.error("Initiation MyPVit impossible : %s", exc)
         return Response(
-            {
-                "error": (
-                    "Paiement carte non activé. Créez un compte sur sandbox.fedapay.com "
-                    "et ajoutez FEDAPAY_SECRET_KEY dans le fichier .env du backend."
-                ),
-            },
+            {"error": "Le service de paiement est momentanément indisponible. Réessayez dans un instant."},
             status=503,
         )
+    return Response(_session_payload(session, request.user), status=201)
 
-    method = str(request.data.get("method", "")).strip()
-    if method not in ("Visa", "Mastercard"):
-        return Response({"error": "Méthode invalide. Utilisez Visa ou Mastercard."}, status=400)
 
-    plan = str(request.data.get("plan", "")).strip()
-    if plan and plan not in ("monthly", "pro"):
-        return Response({"error": "Plan invalide."}, status=400)
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+@throttle_classes([PaymentStatusThrottle])
+def payment_detail(request, reference):
+    """Statut d'un paiement de l'utilisateur connecté (sondé par le frontend).
 
-    media_id = request.data.get("media_id")
-    media = None
-    amount_fcfa = request.data.get("amount_fcfa")
+    Si le webhook tarde, interroge MyPVit (au plus toutes les 15 s par paiement)
+    pour ne pas laisser le client dans l'incertitude."""
+    session = get_object_or_404(PaymentSession, reference=reference, user=request.user)
 
-    if media_id:
-        media = get_object_or_404(Media, id=media_id, status="published")
-        amount_fcfa = media.price
-    else:
-        try:
-            amount_fcfa = int(amount_fcfa)
-        except (TypeError, ValueError):
-            return Response({"error": "Montant invalide."}, status=400)
-        if amount_fcfa < 100:
-            return Response({"error": "Le montant minimum est de 100 FCFA."}, status=400)
+    age = (timezone.now() - session.created_at).total_seconds()
+    if session.status == "pending" and session.provider == "mypvit" and age > 30:
+        if cache.add(f"mypvit:reconcile:{session.reference}", 1, 15):
+            session = reconcile_session(session)
 
-    if not media_id and not plan:
-        return Response({"error": "media_id ou plan requis."}, status=400)
+    request.user.refresh_from_db(fields=["plan", "plan_expires_at"])
+    return Response(_session_payload(session, request.user))
 
-    order_id = f"YETOU-FP-{request.user.id}-{int(time.time() * 1000)}"
-    amount_usd = fcfa_to_usd(amount_fcfa)
-    description = media.title if media else f"Abonnement Gabon Pixel ({plan})"
 
-    session = PaymentSession.objects.create(
-        reference=order_id,
-        provider="fedapay",
-        user=request.user,
-        media=media,
-        amount_fcfa=amount_fcfa,
-        amount_usd=amount_usd,
-        method=method,
-        plan=plan,
-    )
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def payment_list(request):
+    """Historique des paiements de l'utilisateur connecté."""
+    sessions = PaymentSession.objects.filter(user=request.user).select_related("media")[:50]
+    return Response([
+        {
+            "reference": s.reference,
+            "status": s.status,
+            "method": s.method,
+            "amount_fcfa": s.amount_fcfa,
+            "media_title": s.media.title if s.media_id else "",
+            "plan": s.plan,
+            "created_at": s.created_at,
+            "failure_reason": friendly_failure_reason(s.failure_reason) if s.status == "failed" else "",
+        }
+        for s in sessions
+    ])
 
-    customer_name = getattr(request.user, "name", "") or request.user.get_full_name() or ""
-    result = create_fedapay_payment(
-        order_id,
-        amount_fcfa,
-        request.user.email,
-        customer_name=customer_name,
-        description=description,
-    )
-    if not result["success"]:
-        session.status = "failed"
-        session.save(update_fields=["status"])
-        PaymentLog.objects.create(
-            amount=amount_fcfa,
-            method=method,
-            reference=order_id,
-            status="failed",
-            message=result.get("message", ""),
-        )
-        return Response({"error": result["message"]}, status=502)
 
-    PaymentLog.objects.create(
-        amount=amount_fcfa,
-        method=method,
-        reference=order_id,
-        status="pending",
-        message="FedaPay initié",
-        transaction_id=result.get("transaction_id", ""),
-    )
+def _client_ip(request) -> str:
+    """IP de l'appelant. Derrière un reverse proxy de confiance
+    (TRUST_X_FORWARDED_FOR=True), on prend la dernière IP ajoutée par le proxy."""
+    if getattr(settings, "TRUST_X_FORWARDED_FOR", False):
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            return forwarded.split(",")[-1].strip()
+    return request.META.get("REMOTE_ADDR", "")
 
-    return Response({
-        "payment_url": result["payment_url"],
-        "reference": order_id,
-        "transaction_id": result.get("transaction_id"),
-        "amount_fcfa": amount_fcfa,
-    })
+
+def _is_mypvit_ip(ip: str) -> bool:
+    allowed = getattr(settings, "MYPVIT_WEBHOOK_ALLOWED_IPS", [])
+    if not ip or not allowed:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip)
+        return any(addr in ipaddress.ip_network(net, strict=False) for net in allowed)
+    except ValueError:
+        return False
 
 
 @api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
-def fedapay_confirm(request):
+@authentication_classes([])
+@permission_classes([permissions.AllowAny])
+def mypvit_webhook(request):
     """
-    Confirme un paiement FedaPay après retour client.
-    Corps : { reference, transaction_id }
-    """
-    reference = str(request.data.get("reference", "")).strip()
-    transaction_id = str(request.data.get("transaction_id", "")).strip()
-    if not reference or not transaction_id:
-        return Response({"error": "reference et transaction_id requis."}, status=400)
+    Webhook MyPVit : notification asynchrone du statut final (SUCCESS/FAILED).
 
-    session = (
-        PaymentSession.objects.filter(reference=reference, user=request.user, provider="fedapay")
-        .select_related("user", "media")
-        .first()
+    MyPVit ne signe pas ses webhooks : le statut reçu n'est JAMAIS appliqué tel
+    quel — `confirm_payment` le contre-vérifie via Check Status. Si
+    MYPVIT_WEBHOOK_ALLOWED_IPS est défini, les autres IP sont rejetées.
+
+    Règle MyPVit : répondre 200 avec l'écho EXACT de transactionId / code reçus.
+    """
+    ip = _client_ip(request)
+    trusted_source = _is_mypvit_ip(ip)
+    if getattr(settings, "MYPVIT_WEBHOOK_ALLOWED_IPS", []) and not trusted_source:
+        logger.warning("Webhook MyPVit rejeté : IP non autorisée (%s).", ip)
+        return Response({"error": "Forbidden"}, status=403)
+
+    payload = request.data if hasattr(request.data, "get") else {}
+    transaction_id = payload.get("transactionId")
+    reference = payload.get("merchantReferenceId")
+    code = payload.get("code")
+    ack = {"transactionId": transaction_id, "responseCode": code}
+
+    if not reference:
+        logger.warning("Webhook MyPVit sans merchantReferenceId.")
+        return Response(ack, status=200)
+
+    confirm_payment(
+        reference=str(reference),
+        reported_status=str(payload.get("status") or ""),
+        transaction_id=str(transaction_id or ""),
+        raw_payload=dict(payload),
+        amount=payload.get("amount"),
+        fees=payload.get("fees"),
+        message=str(payload.get("message") or ""),
+        trusted_source=trusted_source,
     )
-    if not session:
-        return Response({"error": "Session de paiement introuvable."}, status=404)
-
-    if session.status == "success":
-        return Response({"status": "success", "reference": reference})
-
-    verified = verify_transaction(transaction_id)
-    if not verified.get("success"):
-        return Response({"error": verified.get("message", "Vérification impossible.")}, status=502)
-
-    status = verified.get("status", "")
-    if status not in ("approved", "transferred", "completed"):
-        return Response(
-            {"error": f"Paiement non confirmé (statut : {status or 'inconnu'})."},
-            status=400,
-        )
-
-    _complete_payment_session(session, transaction_id, "Paiement carte confirmé")
-    return Response({"status": "success", "reference": reference})
-
-
-@api_view(["POST"])
-@permission_classes([permissions.IsAuthenticated])
-def singpay_initiate(request):
-    """
-    Crée une session de paiement mobile/PayPal (SingPay) côté serveur, avant
-    redirection. Le montant est recalculé côté serveur à partir du média (jamais
-    fait confiance au montant envoyé par le client), comme pour FedaPay.
-
-    Corps : { media_id?, amount_fcfa?, method: "Airtel Money"|"Moov Money", plan? }
-    Réponse : { reference, amount_fcfa }
-    """
-    method = str(request.data.get("method", "")).strip()
-    if method not in ("Airtel Money", "Moov Money"):
-        return Response({"error": "Méthode invalide. Utilisez Airtel Money ou Moov Money."}, status=400)
-
-    plan = str(request.data.get("plan", "")).strip()
-    if plan and plan not in ("monthly", "pro"):
-        return Response({"error": "Plan invalide."}, status=400)
-
-    media_id = request.data.get("media_id")
-    media = None
-    amount_fcfa = request.data.get("amount_fcfa")
-
-    if media_id:
-        media = get_object_or_404(Media, id=media_id, status="published")
-        amount_fcfa = media.price
-    else:
-        try:
-            amount_fcfa = int(amount_fcfa)
-        except (TypeError, ValueError):
-            return Response({"error": "Montant invalide."}, status=400)
-        if amount_fcfa < 100:
-            return Response({"error": "Le montant minimum est de 100 FCFA."}, status=400)
-
-    if not media_id and not plan:
-        return Response({"error": "media_id ou plan requis."}, status=400)
-
-    order_id = f"YETOU-SP-{request.user.id}-{int(time.time() * 1000)}"
-
-    PaymentSession.objects.create(
-        reference=order_id,
-        provider="singpay",
-        user=request.user,
-        media=media,
-        amount_fcfa=amount_fcfa,
-        method=method,
-        plan=plan,
-    )
-    PaymentLog.objects.create(
-        amount=amount_fcfa,
-        method=method,
-        reference=order_id,
-        status="pending",
-        message="SingPay initié",
-    )
-
-    return Response({"reference": order_id, "amount_fcfa": amount_fcfa})
+    return Response(ack, status=200)

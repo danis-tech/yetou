@@ -149,7 +149,8 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
         playsInline
         onClick={togglePlay}
         onContextMenu={(e) => e.preventDefault()}
-        controlsList="nodownload"
+        controlsList="nodownload noremoteplayback noplaybackrate"
+        disableRemotePlayback
         disablePictureInPicture
       />
 
@@ -161,7 +162,7 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
         {preview && (
           <div style={{
             background: "rgba(0,0,0,0.7)", color: "#fff",
-            fontSize: "10px", fontWeight: 600, padding: "6px 10px", borderRadius: "8px",
+            fontSize: "12px", fontWeight: 600, padding: "6px 10px", borderRadius: "8px",
             fontVariantNumeric: "tabular-nums",
             border: "1px solid rgba(255,255,255,0.1)",
           }}>
@@ -179,7 +180,7 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "16px", transition: "background 0.15s",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(200,55,26,0.75)"; }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(47,111,115,0.75)"; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(0,0,0,0.65)"; }}
         >
           <i className={`ti ${muted ? "ti-volume-off" : "ti-volume"}`}></i>
@@ -193,15 +194,15 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
           display: "flex", gap: "6px",
         }}>
           <div style={{
-            background: "rgba(200,55,26,0.85)", color: "#fff",
-            fontSize: "10px", fontWeight: 700, padding: "4px 12px", borderRadius: "8px",
+            background: "rgba(47,111,115,0.85)", color: "#fff",
+            fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "8px",
             display: "flex", alignItems: "center", gap: "4px",
           }}>
             <i className="ti ti-eye" style={{ fontSize: "12px" }}></i> PRÉVISUALISATION
           </div>
           <div style={{
             background: "rgba(0,0,0,0.7)", color: "#fff",
-            fontSize: "10px", fontWeight: 700, padding: "4px 10px", borderRadius: "8px",
+            fontSize: "12px", fontWeight: 700, padding: "4px 10px", borderRadius: "8px",
             border: "1px solid rgba(255,255,255,0.1)",
           }}>
             4K UHD
@@ -221,10 +222,10 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
         >
           <div style={{
             width: preview ? "70px" : "80px", height: preview ? "70px" : "80px", borderRadius: "50%",
-            background: "rgba(200,55,26,0.9)", display: "flex",
+            background: "rgba(47,111,115,0.9)", display: "flex",
             alignItems: "center", justifyContent: "center",
             transition: "transform 0.2s, box-shadow 0.2s",
-            boxShadow: "0 0 40px rgba(200,55,26,0.4)",
+            boxShadow: "0 0 40px rgba(47,111,115,0.4)",
             cursor: "pointer",
           }}
             onMouseEnter={(e) => {
@@ -266,7 +267,7 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
         >
           <div style={{
             height: "100%", width: `${progressPct}%`,
-            background: preview ? "linear-gradient(90deg, #C8371A, #e04528)" : "#C8371A",
+            background: preview ? "linear-gradient(90deg, var(--river), var(--river-deep))" : "var(--river)",
             borderRadius: "3px",
             transition: seeking ? "none" : "width 0.1s linear",
             position: "relative",
@@ -274,9 +275,9 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
             <div style={{
               position: "absolute", right: "-6px", top: "-4px",
               width: "14px", height: "14px", borderRadius: "50%",
-              background: "#C8371A", opacity: seeking ? 1 : 0,
+              background: "var(--river)", opacity: seeking ? 1 : 0,
               transition: "opacity 0.15s",
-              boxShadow: "0 0 4px rgba(200,55,26,0.6)",
+              boxShadow: "0 0 4px rgba(47,111,115,0.6)",
             }} />
           </div>
         </div>
@@ -304,11 +305,11 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
 
           {/* Watermark */}
           <span style={{
-            fontFamily: "Sora, sans-serif", fontSize: "10px", fontWeight: 700,
+            fontFamily: "var(--font)", fontSize: "12px", fontWeight: 700,
             color: "rgba(255,255,255,0.25)", letterSpacing: "2px",
             userSelect: "none",
           }}>
-            Gabon Pixel
+            Pixia
           </span>
         </div>
       </div>
@@ -316,13 +317,13 @@ export default function VideoPlayer({ src, poster, preview, autoPlay }: VideoPla
       {/* Bottom protection bar */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0,
-        background: "rgba(10,10,15,0.6)", backdropFilter: "blur(4px)",
+        background: "rgba(238,241,236,0.6)", backdropFilter: "blur(4px)",
         padding: "4px 12px", display: "flex", alignItems: "center", justifyContent: "center",
         gap: "8px", zIndex: 6, borderTop: "1px solid rgba(255,255,255,0.06)",
       }}>
-        <i className="ti ti-shield-lock" style={{ fontSize: "10px", color: "#8A8A95" }}></i>
-        <span style={{ fontSize: "9px", color: "#8A8A95" }}>
-          Lecture autorisée · Téléchargement protégé par Gabon Pixel
+        <i className="ti ti-shield-lock" style={{ fontSize: "12px", color: "var(--ink-2)" }}></i>
+        <span style={{ fontSize: "12px", color: "var(--ink-2)" }}>
+          Lecture autorisée · Téléchargement protégé par Pixia
         </span>
       </div>
     </div>

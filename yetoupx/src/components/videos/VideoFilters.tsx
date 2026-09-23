@@ -42,7 +42,7 @@ export default function VideoFilters({
   const reses = ["all", ...pricing.pricing.video.map((r) => r.quality)];
   const resLabels: Record<string, string> = { all: "Toutes" };
   pricing.pricing.video.forEach((r) => {
-    resLabels[r.quality] = `${r.quality_display} — ${formatFcfa(r.price)}`;
+    resLabels[r.quality] = `${r.quality_display} (${formatFcfa(r.price)})`;
   });
 
   return (

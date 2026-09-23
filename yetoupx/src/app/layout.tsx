@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
+import MediaGuard from "@/components/ui/MediaGuard";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Gabon Pixel — Médias aériens HD & 4K · Gabon",
+  title: "Pixia — Médias aériens HD & 4K · Gabon",
   description:
-    "Plateforme de vente de médias aériens HD & 4K — paysages, culture, nature et événements gabonais capturés par drone professionnel. Développée par Best Aero Drone · Libreville, Gabon.",
+    "Plateforme de vente de médias aériens HD & 4K — paysages, culture, nature et événements gabonais capturés par drone professionnel. Développée par Agenxia · Libreville, Gabon.",
   keywords:
     "drone, Gabon, photos aériennes, vidéos 4K, Libreville, paysages, médias professionnels",
 };
@@ -21,7 +22,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
         <link
@@ -35,6 +36,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>
+        <MediaGuard />
       </body>
     </html>
   );

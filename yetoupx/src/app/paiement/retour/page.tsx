@@ -3,9 +3,33 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { createPurchase, confirmFedapayPayment, checkPaymentStatus } from "@/services/api";
-import { getApiUrl } from "@/lib/api-url";
+import { fetchPayment } from "@/services/api";
+import { PENDING_PAYMENT_KEY } from "@/hooks/usePayment";
+import type { UserPlan } from "@/types";
 
+const POLL_INTERVAL_MS = 3000;
+const POLL_TIMEOUT_MS = 2 * 60 * 1000;
+
+function readPending(): { reference: string; returnTo: string } | null {
+  try {
+    const raw = localStorage.getItem(PENDING_PAYMENT_KEY);
+    if (!raw) return null;
+    const pending = JSON.parse(raw);
+    if (typeof pending?.reference !== "string" || !pending.reference) return null;
+    const returnTo = typeof pending.returnTo === "string" && pending.returnTo.startsWith("/") && !pending.returnTo.startsWith("//")
+      ? pending.returnTo
+      : "/dashboard?tab=downloads";
+    return { reference: pending.reference, returnTo };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Retour du formulaire carte MyPVit. Le paramètre ?status= de l'URL n'est
+ * qu'indicatif : le résultat affiché vient toujours du serveur, qui a vérifié
+ * le paiement auprès de MyPVit.
+ */
 function PaiementRetourContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -14,180 +38,71 @@ function PaiementRetourContent() {
   const [message, setMessage] = useState("Vérification de votre paiement...");
   const [returnTo, setReturnTo] = useState("/dashboard?tab=downloads");
 
-  function readReturnTo(): string {
-    try {
-      const raw = localStorage.getItem("yetou_pending_purchase");
-      if (raw) {
-        const pending = JSON.parse(raw);
-        if (typeof pending?.returnTo === "string" && pending.returnTo) return pending.returnTo;
-      }
-    } catch {
-      /* ignore */
-    }
-    return "/dashboard?tab=downloads";
-  }
-
   useEffect(() => {
-    const ref = searchParams.get("ref");
-    const fedapayStatus = searchParams.get("status");
-    const transactionId = searchParams.get("id");
-    const singpayStatus = searchParams.get("status");
+    let cancelled = false;
 
-    const rt = readReturnTo();
-    setReturnTo(rt);
+    async function verify() {
+      const pending = readPending();
+      const reference = pending?.reference || searchParams.get("ref") || "";
+      setReturnTo(pending?.returnTo || "/dashboard?tab=downloads");
 
-    // Retour FedaPay (carte) : ?ref=...&id=...&status=approved
-    if (ref && transactionId && fedapayStatus === "approved") {
-      handleFedapaySuccess(ref, transactionId, rt);
-      return;
-    }
-    if (fedapayStatus === "canceled") {
-      setStatus("error");
-      setMessage("Paiement annulé. Vous pouvez réessayer.");
-      return;
-    }
-
-    // Retour SingPay (mobile)
-    if (singpayStatus === "success" && ref) {
-      handleSingpaySuccess(ref, rt);
-      return;
-    }
-    if (singpayStatus === "error") {
-      handleSingpayError(ref, rt);
-      return;
-    }
-
-    setStatus("error");
-    setMessage("Paramètres de retour invalides.");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  async function handleFedapaySuccess(reference: string, transactionId: string, rt: string) {
-    try {
-      const token = localStorage.getItem("yetou_token");
-      if (!token) {
+      if (!reference) {
         setStatus("error");
-        setMessage("Connectez-vous avec le même compte pour finaliser votre achat.");
+        setMessage("Aucun paiement en cours. Consultez l'onglet Paiements de votre tableau de bord.");
         return;
       }
-
-      const confirmed = await confirmFedapayPayment({ reference, transaction_id: transactionId });
-      if (!confirmed.ok) {
+      if (!localStorage.getItem("pixia_token")) {
         setStatus("error");
-        setMessage(confirmed.error);
+        setMessage("Connectez-vous avec le même compte pour vérifier votre paiement.");
         return;
       }
 
-      const pendingRaw = localStorage.getItem("yetou_pending_purchase");
-      const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
-      if (pending?.plan) {
-        try {
-          const res = await fetch(`${getApiUrl()}/users/profile/`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ plan: pending.plan }),
-          });
-          if (res.ok) setPlan(pending.plan);
-        } catch {
-          console.warn("callback: impossible de sync le plan Django.");
-        }
-      }
-
-      localStorage.removeItem("yetou_pending_purchase");
-      setStatus("success");
-      setMessage("Paiement confirmé ! Votre achat est disponible dans le dashboard.");
-      setTimeout(() => router.push(rt), 2000);
-    } catch {
-      setStatus("error");
-      setMessage("Erreur lors de la validation du paiement.");
-    }
-  }
-
-  async function handleSingpayError(reference: string | null, rt: string) {
-    if (!reference) {
-      setStatus("error");
-      setMessage("Le paiement a échoué ou a été annulé. Vous pouvez réessayer.");
-      return;
-    }
-    const result = await checkPaymentStatus(reference);
-    setStatus("error");
-    if (result.status === "success") {
-      // Le webhook a confirmé le succès entre-temps malgré la redirection d'erreur.
-      handleSingpaySuccess(reference, rt);
-      return;
-    }
-    setMessage(
-      result.status === "failed"
-        ? result.message
-        : "Le paiement a échoué ou a été annulé. Vous pouvez réessayer.",
-    );
-  }
-
-  async function handleSingpaySuccess(reference: string, rt: string) {
-    try {
-      const pendingRaw = localStorage.getItem("yetou_pending_purchase");
-      const pending = pendingRaw ? JSON.parse(pendingRaw) : null;
-
-      if (!pending || pending.reference !== reference) {
-        setStatus("success");
-        setMessage("Paiement confirmé par SingPay. Si l'achat n'apparaît pas, contactez le support avec la référence : " + reference);
-        setTimeout(() => router.push(rt), 3000);
-        return;
-      }
-
-      const token = localStorage.getItem("yetou_token");
-      if (!token) {
-        setStatus("error");
-        setMessage("Connectez-vous avec le même compte pour récupérer votre achat.");
-        return;
-      }
-
-      if (pending.mediaId) {
-        const purchase = await createPurchase(pending.mediaId, {
-          payment_method: pending.paymentMethod || "",
-          payment_reference: reference,
-          payment_status: "success",
-        });
-        if (!purchase) {
-          setStatus("error");
-          setMessage(`Paiement reçu mais l'achat n'a pas pu être enregistré. Référence : ${reference}`);
+      const deadline = Date.now() + POLL_TIMEOUT_MS;
+      while (!cancelled && Date.now() < deadline) {
+        const payment = await fetchPayment(reference);
+        if (cancelled) return;
+        if (payment?.status === "success") {
+          localStorage.removeItem(PENDING_PAYMENT_KEY);
+          if (payment.plan) setPlan(payment.user_plan as UserPlan);
+          setStatus("success");
+          setMessage("Paiement confirmé ! Votre achat est disponible dans le dashboard.");
+          setTimeout(() => router.push(payment.plan ? "/dashboard?tab=plan" : "/dashboard?tab=downloads"), 2000);
           return;
         }
-      }
-
-      if (pending.plan) {
-        try {
-          const res = await fetch(`${getApiUrl()}/users/profile/`, {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ plan: pending.plan }),
-          });
-          if (res.ok) setPlan(pending.plan);
-        } catch {
-          console.warn("callback: impossible de sync le plan Django.");
+        if (payment?.status === "failed") {
+          localStorage.removeItem(PENDING_PAYMENT_KEY);
+          setStatus("error");
+          setMessage(payment.message || "Le paiement a échoué ou a été annulé. Vous pouvez réessayer.");
+          return;
         }
+        if (!payment) {
+          setStatus("error");
+          setMessage(`Paiement introuvable. Contactez le support avec la référence : ${reference}`);
+          return;
+        }
+        setMessage("Confirmation du paiement en cours auprès de la banque...");
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
       }
-
-      localStorage.removeItem("yetou_pending_purchase");
-
-      setStatus("success");
-      setMessage("Paiement confirmé ! Votre achat est disponible dans le dashboard.");
-      setTimeout(() => router.push(rt), 2000);
-    } catch {
-      setStatus("error");
-      setMessage("Erreur lors de la validation du paiement.");
+      if (!cancelled) {
+        setStatus("error");
+        setMessage(
+          "Le paiement est toujours en attente de confirmation. Vous serez notifié dès sa validation. " +
+            `Référence : ${reference}`,
+        );
+      }
     }
-  }
+
+    verify();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#0A0A0F",
+      minHeight: "100vh", background: "var(--paper)",
       display: "flex", flexDirection: "column", alignItems: "center",
       justifyContent: "center", padding: "40px", gap: "20px",
     }}>
@@ -195,10 +110,10 @@ function PaiementRetourContent() {
         <>
           <div style={{
             width: "56px", height: "56px", borderRadius: "50%",
-            border: "3px solid #2A2A35", borderTopColor: "#C8371A",
+            border: "3px solid var(--contour)", borderTopColor: "var(--river)",
             animation: "spin 0.8s linear infinite",
           }} />
-          <p style={{ color: "#8A8A95", fontSize: "14px" }}>{message}</p>
+          <p style={{ color: "var(--ink-2)", fontSize: "14px" }}>{message}</p>
         </>
       )}
 
@@ -206,15 +121,15 @@ function PaiementRetourContent() {
         <>
           <div style={{
             width: "72px", height: "72px", borderRadius: "50%",
-            background: "rgba(34,197,94,0.12)", display: "flex",
+            background: "rgba(47,125,79,0.12)", display: "flex",
             alignItems: "center", justifyContent: "center",
           }}>
-            <i className="ti ti-circle-check" style={{ fontSize: "36px", color: "#22c55e" }}></i>
+            <i className="ti ti-circle-check" style={{ fontSize: "36px", color: "var(--ok)" }}></i>
           </div>
-          <h2 style={{ fontFamily: "Sora, sans-serif", fontSize: "22px", fontWeight: 700, color: "#F0EFEA" }}>
+          <h2 style={{ fontFamily: "var(--font)", fontSize: "22px", fontWeight: 700, color: "var(--ink)" }}>
             Paiement réussi !
           </h2>
-          <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center", maxWidth: 420 }}>{message}</p>
+          <p style={{ color: "var(--ink-2)", fontSize: "14px", textAlign: "center", maxWidth: 420 }}>{message}</p>
         </>
       )}
 
@@ -222,15 +137,15 @@ function PaiementRetourContent() {
         <>
           <div style={{
             width: "72px", height: "72px", borderRadius: "50%",
-            background: "rgba(200,55,26,0.12)", display: "flex",
+            background: "rgba(179,65,46,0.10)", display: "flex",
             alignItems: "center", justifyContent: "center",
           }}>
-            <i className="ti ti-x" style={{ fontSize: "36px", color: "#C8371A" }}></i>
+            <i className="ti ti-x" style={{ fontSize: "36px", color: "var(--danger)" }}></i>
           </div>
-          <h2 style={{ fontFamily: "Sora, sans-serif", fontSize: "22px", fontWeight: 700, color: "#F0EFEA" }}>
+          <h2 style={{ fontFamily: "var(--font)", fontSize: "22px", fontWeight: 700, color: "var(--ink)" }}>
             Paiement non finalisé
           </h2>
-          <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center", maxWidth: 420 }}>{message}</p>
+          <p style={{ color: "var(--ink-2)", fontSize: "14px", textAlign: "center", maxWidth: 420 }}>{message}</p>
           <button
             className="btn-primary"
             onClick={() => router.push(returnTo)}

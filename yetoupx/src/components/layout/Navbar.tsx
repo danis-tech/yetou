@@ -56,8 +56,8 @@ export default function Navbar({
     <>
       <nav className="navbar">
         <div className="logo">
-          Gabon <em>Pixel</em>
-          <span>by Best Aero Drone · Gabon</span>
+          Pixia
+          <span>par Agenxia</span>
         </div>
 
         <div className="nav-tabs">
@@ -82,6 +82,7 @@ export default function Navbar({
         </div>
 
         <div className="nav-right">
+          <a href="/contribuer" className="nav-contribute">Devenir contributeur</a>
           <button
             type="button"
             className={`nav-search-toggle ${searchOpen ? "active" : ""}`}
@@ -97,7 +98,7 @@ export default function Navbar({
               <button
                 className="btn-primary"
                 onClick={() => router.push("/dashboard")}
-                style={{ background: "rgba(200,55,26,0.12)", color: "#F0EFEA", border: "1px solid rgba(200,55,26,0.3)" }}
+                style={{ background: "rgba(47,111,115,0.12)", color: "var(--ink)", border: "1px solid rgba(47,111,115,0.3)" }}
               >
                 <i className="ti ti-user"></i>
                 <span className="nav-primary-text">{user?.name}</span>
@@ -106,7 +107,7 @@ export default function Navbar({
                 <button
                   className="btn-primary"
                   onClick={onShowDownloads}
-                  style={{ background: "#22c55e" }}
+                  style={{ background: "var(--ok)" }}
                 >
                   <i className="ti ti-download"></i>{" "}
                   <span className="nav-primary-text">Mes téléchargements ({purchasedItems.length})</span>
@@ -119,7 +120,7 @@ export default function Navbar({
                 <button
                   className="btn-primary"
                   onClick={onShowDownloads}
-                  style={{ background: "#22c55e" }}
+                  style={{ background: "var(--ok)" }}
                 >
                   <i className="ti ti-download"></i>{" "}
                   <span className="nav-primary-text">Mes téléchargements ({purchasedItems.length})</span>

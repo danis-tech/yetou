@@ -3,51 +3,6 @@ export interface ValidationResult {
   errors: string[];
 }
 
-export function validatePayment(body: Record<string, unknown>): ValidationResult {
-  return validatePaymentInternal(body, true);
-}
-
-export function validateExternalPayment(body: Record<string, unknown>): ValidationResult {
-  return validatePaymentInternal(body, false);
-}
-
-function validatePaymentInternal(body: Record<string, unknown>, requirePhone: boolean): ValidationResult {
-  const errors: string[] = [];
-  const { amount, method, client_msisdn } = body;
-
-  if (!amount || typeof amount !== "number" || amount <= 0) {
-    errors.push("Le montant est requis et doit être positif.");
-  }
-  if (typeof amount === "number" && amount > 1_000_000) {
-    errors.push("Le montant maximum est de 1 000 000 FCFA.");
-  }
-
-  const validMethods = ["Airtel Money", "Moov Money"];
-  if (!method || typeof method !== "string" || !validMethods.includes(method)) {
-    errors.push("Méthode de paiement invalide. Utilisez Airtel Money ou Moov Money.");
-  }
-
-  if (requirePhone) {
-    const isMobile = method === "Airtel Money" || method === "Moov Money";
-    if (isMobile) {
-      if (!client_msisdn || typeof client_msisdn !== "string" || !client_msisdn.trim()) {
-        errors.push("Le numéro de téléphone est requis.");
-      } else {
-        const digits = (client_msisdn as string).replace(/\D/g, "");
-        const valid =
-          (digits.length === 8 && (digits.startsWith("06") || digits.startsWith("07"))) ||
-          (digits.length === 9 && digits.startsWith("0") && (digits[1] === "6" || digits[1] === "7")) ||
-          (digits.length === 11 && digits.startsWith("241"));
-        if (!valid) {
-          errors.push("Numéro invalide. Format attendu : 077 000 000 ou 24177000000.");
-        }
-      }
-    }
-  }
-
-  return { valid: errors.length === 0, errors };
-}
-
 export function validateUpload(body: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
   const { title, type, category, format, price } = body;

@@ -2,14 +2,21 @@ import environ
 from pathlib import Path
 from datetime import timedelta
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env")
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", default="django-insecure-b01vz_l!97axu*afie1(=x6un%3*@e!060_4g8!m-))jd!j6=!")
+# DEBUG désactivé par défaut : il faut l'activer explicitement (DEBUG=True) en dev.
+DEBUG = env("DEBUG", default=False, cast=bool)
 
-DEBUG = env("DEBUG", default=True, cast=bool)
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY doit être défini dans .env en production.")
+    SECRET_KEY = "django-insecure-dev-only-key-ne-pas-utiliser-en-production"
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
@@ -62,6 +69,7 @@ INSTALLED_APPS = [
     # Local
     "users_app",
     "media_app",
+    "contributors",
 ]
 
 SITE_ID = 1
@@ -113,7 +121,10 @@ DATABASES = {
 AUTH_USER_MODEL = "users_app.User"
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 6}},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 LANGUAGE_CODE = "fr-fr"
@@ -125,18 +136,35 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-INTERNAL_API_SECRET = env("INTERNAL_API_SECRET", default="yetou-internal-secret-change-me")
-
-# Secret pour vérifier les webhooks SingPay (HMAC-SHA256)
-# À récupérer dans le dashboard SingPay et à définir dans .env
-SINGPAY_WEBHOOK_SECRET = env("SINGPAY_WEBHOOK_SECRET", default="")
-
-# FedaPay — carte Visa/Mastercard (optionnel, désactivé si clé vide)
-FEDAPAY_SECRET_KEY = env("FEDAPAY_SECRET_KEY", default="")
-FEDAPAY_ENVIRONMENT = env("FEDAPAY_ENVIRONMENT", default="sandbox")
-FEDAPAY_CURRENCY = env("FEDAPAY_CURRENCY", default="XOF")
-FEDAPAY_CHECKOUT_MODE = env("FEDAPAY_CHECKOUT_MODE", default="card")
-FCFA_PER_USD = env("FCFA_PER_USD", default=650, cast=float)
+# ─── MyPVit (docs.mypvit.pro) — Airtel Money, Moov Money, Visa/Mastercard ───
+# Valeurs à récupérer sur mypvit.pro :
+# - MYPVIT_ACCOUNT_CODE(_MOOV/_AIRTEL/_VISA_MASTERCARD) : comptes d'opération (menu Comptes)
+# - MYPVIT_API_PASSWORD : mot de passe de l'API Renew Secret Key
+# - MYPVIT_CODE_URL_* : « codes URL » de chaque API (menu APIs)
+# - MYPVIT_CALLBACK_URL_CODE : code de l'URL de callback (menu Urls) pointant vers
+#   https://<backend>/api/payments/webhook/mypvit/
+# - MYPVIT_SUCCESS/FAILED_REDIRECTION_URL_CODE : URLs de redirection carte (menu Urls)
+#   pointant vers https://<frontend>/paiement/retour?status=success|error
+MYPVIT_BASE_URL = env("MYPVIT_BASE_URL", default="https://api.mypvit.pro/v2")
+MYPVIT_ACCOUNT_CODE = env("MYPVIT_ACCOUNT_CODE", default="")
+MYPVIT_ACCOUNT_CODE_MOOV = env("MYPVIT_ACCOUNT_CODE_MOOV", default="")
+MYPVIT_ACCOUNT_CODE_AIRTEL = env("MYPVIT_ACCOUNT_CODE_AIRTEL", default="")
+MYPVIT_ACCOUNT_CODE_VISA_MASTERCARD = env("MYPVIT_ACCOUNT_CODE_VISA_MASTERCARD", default="")
+MYPVIT_API_PASSWORD = env("MYPVIT_API_PASSWORD", default="")
+MYPVIT_CODE_URL_SECRET = env("MYPVIT_CODE_URL_SECRET", default="")
+MYPVIT_CODE_URL_PAYMENT = env("MYPVIT_CODE_URL_PAYMENT", default="")
+MYPVIT_CODE_URL_STATUS = env("MYPVIT_CODE_URL_STATUS", default="")
+MYPVIT_CODE_URL_KYC = env("MYPVIT_CODE_URL_KYC", default="")
+MYPVIT_CODE_URL_LINK = env("MYPVIT_CODE_URL_LINK", default="")
+MYPVIT_CALLBACK_URL_CODE = env("MYPVIT_CALLBACK_URL_CODE", default="")
+MYPVIT_SUCCESS_REDIRECTION_URL_CODE = env("MYPVIT_SUCCESS_REDIRECTION_URL_CODE", default="")
+MYPVIT_FAILED_REDIRECTION_URL_CODE = env("MYPVIT_FAILED_REDIRECTION_URL_CODE", default="")
+# IP/réseaux sortants de MyPVit (fournis par leur support), séparés par des
+# virgules. Si défini, tout webhook venant d'une autre IP est rejeté.
+MYPVIT_WEBHOOK_ALLOWED_IPS = [ip.strip() for ip in env("MYPVIT_WEBHOOK_ALLOWED_IPS", default="").split(",") if ip.strip()]
+# True uniquement derrière un reverse proxy de confiance (nginx...) qui ajoute
+# l'IP réelle du client dans X-Forwarded-For.
+TRUST_X_FORWARDED_FOR = env("TRUST_X_FORWARDED_FOR", default=False, cast=bool)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -147,7 +175,7 @@ CORS_ALLOW_CREDENTIALS = True
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
 # ─── Logging ───
-# Sans cette config, les logger.info(...) de l'app (webhooks, FedaPay...) sont
+# Sans cette config, les logger.info(...) de l'app (webhooks MyPVit...) sont
 # silencieusement ignorés (seul le niveau WARNING+ remonte par défaut).
 LOGGING = {
     "version": 1,
@@ -171,7 +199,25 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
+    "DEFAULT_THROTTLE_RATES": {
+        "payments": "10/min",
+        "payment_status": "40/min",
+        "contributions": "30/hour",
+    },
 }
+
+# ─── Sécurité HTTP (production) ───
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+    X_FRAME_OPTIONS = "DENY"
+    if TRUST_X_FORWARDED_FOR:
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # À activer une fois le site servi exclusivement en HTTPS.
+    SECURE_SSL_REDIRECT = env("SECURE_SSL_REDIRECT", default=False, cast=bool)
+    SECURE_HSTS_SECONDS = env("SECURE_HSTS_SECONDS", default=0, cast=int)
 
 # ─── Simple JWT ───
 SIMPLE_JWT = {
@@ -210,8 +256,8 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 REST_AUTH = {
     "USE_JWT": True,
     "JWT_AUTH_HTTPONLY": False,
-    "JWT_AUTH_COOKIE": "yetou-auth",
-    "JWT_AUTH_REFRESH_COOKIE": "yetou-refresh",
+    "JWT_AUTH_COOKIE": "pixia-auth",
+    "JWT_AUTH_REFRESH_COOKIE": "pixia-refresh",
     "JWT_AUTH_RETURN_EXPIRATION": True,
     "SESSION_LOGIN": False,
     "LOGIN_SERIALIZER": "users_app.serializers.CustomLoginSerializer",

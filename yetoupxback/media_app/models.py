@@ -1,14 +1,26 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
+from django.utils.text import get_valid_filename
 from django.db.utils import OperationalError, ProgrammingError
 from django.core.validators import FileExtensionValidator, MinValueValidator
 
 
 def media_upload_path(instance, filename):
-    """Organise les fichiers dans R2 : bucket/photo/... ou bucket/video/..."""
-    folder = "photo" if instance.type == "photo" else "video"
-    return f"{folder}/{filename}"
+    """Organise les fichiers dans R2 : bucket/photo/... ou bucket/video/...
 
+    Préfixe aléatoire : le stockage écrase les fichiers de même nom
+    (AWS_S3_FILE_OVERWRITE), deux envois « photo.jpg » ne doivent jamais
+    se remplacer l'un l'autre."""
+    folder = "photo" if instance.type == "photo" else "video"
+    return f"{folder}/{uuid.uuid4().hex[:12]}-{get_valid_filename(filename)[-80:]}"
+
+
+
+def preview_upload_path(instance, filename):
+    """Aperçus publics filigranés, séparés des originaux."""
+    return f"previews/{uuid.uuid4().hex}.jpg"
 
 
 class Category(models.Model):
@@ -82,7 +94,17 @@ class Quality(models.Model):
 
 class Media(models.Model):
     TYPE_CHOICES = [("photo", "Photo"), ("video", "Vidéo")]
-    STATUS_CHOICES = [("draft", "Brouillon"), ("published", "Publié"), ("archived", "Archivé")]
+    STATUS_CHOICES = [
+        ("draft", "Brouillon"),
+        ("pending", "En attente de validation"),
+        ("published", "Publié"),
+        ("rejected", "Refusé"),
+        ("archived", "Archivé"),
+    ]
+    PAYOUT_MODE_CHOICES = [
+        ("revenue_share", "Partage des ventes"),
+        ("buyout", "Rachat direct"),
+    ]
     LICENSE_CHOICES = [
         ("Commerciale · Illimitée", "Commerciale · Illimitée (web, print, publicité — sans limite d'usage)"),
         ("Usage web uniquement", "Usage web uniquement (sites internet, réseaux sociaux, newsletters)"),
@@ -111,6 +133,12 @@ class Media(models.Model):
         help_text="Sélectionnez le fichier image ou vidéo. Stockage automatique sur Cloudflare R2. Formats acceptés : JPG, PNG, WebP, AVIF, MP4, WebM, MOV.")
     thumbnail = models.ImageField("Miniature", upload_to=media_upload_path, blank=True, null=True,
         help_text="Image d'aperçu affichée dans les grilles et listes. Pour les vidéos, choisissez une image représentative. Format recommandé : 16/9.")
+    preview = models.ImageField("Aperçu public filigrané", upload_to=preview_upload_path, blank=True, null=True,
+        editable=False, help_text="Généré automatiquement depuis l'original : c'est la seule image d'une photo servie au public.")
+    preview_source = models.CharField(max_length=255, blank=True, editable=False)
+    # Taille enregistrée à l'envoi : l'afficher ne doit jamais coûter un appel
+    # réseau au stockage (≈ 0,8 s par média sur R2).
+    file_size = models.PositiveBigIntegerField("Taille du fichier (octets)", null=True, blank=True, editable=False)
     license_type = models.CharField("Type de licence", max_length=50, choices=LICENSE_CHOICES,
         default="Commerciale · Illimitée",
         help_text="Droits accordés à l'acheteur. Par défaut : licence commerciale illimitée (usage web, print, publicité).")
@@ -179,6 +207,29 @@ class Media(models.Model):
     capture_time = models.TimeField("Heure de capture", null=True, blank=True,
         help_text="Heure de la prise de vue. Important pour les photos de golden hour (lever/coucher du soleil).")
 
+    # ─── Contribution (média proposé par un contributeur) ───
+    contributor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="Contributeur", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="contributions",
+        help_text="Vide pour un média de la plateforme.",
+    )
+    payout_mode = models.CharField("Rémunération choisie", max_length=20, choices=PAYOUT_MODE_CHOICES, blank=True,
+        help_text="Partage : le contributeur touche un pourcentage de chaque vente. "
+                  "Rachat : il est payé une fois, à la validation, et le média devient celui de la plateforme.")
+    contributor_price = models.PositiveIntegerField("Prix fixé par le contributeur (FCFA)", null=True, blank=True,
+        help_text="Utilisé comme prix de vente en mode « partage des ventes ».")
+    declared_duration_seconds = models.PositiveIntegerField("Durée déclarée (s)", null=True, blank=True)
+    buyout_amount = models.PositiveIntegerField("Montant du rachat (FCFA)", null=True, blank=True,
+        help_text="Rachat direct : laissé vide, il est calculé depuis les tarifs de rachat selon la qualité retenue.")
+    submitted_at = models.DateTimeField("Soumis le", null=True, blank=True)
+    reviewed_at = models.DateTimeField("Examiné le", null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name="Examiné par", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="+",
+    )
+    rejection_reason = models.TextField("Motif du refus", blank=True,
+        help_text="Communiqué au contributeur si le média est refusé.")
+
     # ─── Stats (lecture seule) ───
     downloads = models.PositiveIntegerField("Téléchargements", default=0)
     views = models.PositiveIntegerField("Vues", default=0)
@@ -194,18 +245,33 @@ class Media(models.Model):
         indexes = [
             models.Index(fields=["type", "category"]),
             models.Index(fields=["status"]),
+            models.Index(fields=["contributor", "status"]),
             models.Index(fields=["-created_at"]),
         ]
 
     def __str__(self):
         return f"[{self.get_type_display()}] {self.title}"
 
+    @property
+    def is_contribution(self) -> bool:
+        return self.contributor_id is not None
+
     def save(self, *args, **kwargs):
-        """Applique automatiquement le tarif configuré (type + qualité) s'il existe."""
-        configured_price = PricingConfig.get_price(self.type, self.quality)
-        if configured_price is not None:
-            self.price = configured_price
+        """Prix de vente : celui du contributeur en mode « partage des ventes »,
+        sinon le tarif configuré (type + qualité) s'il existe."""
+        if self.file and not getattr(self.file, "_committed", True):
+            self.file_size = self.file.size  # fichier en cours d'envoi : taille connue localement
+        if self.contributor_id and self.payout_mode == "revenue_share" and self.contributor_price:
+            self.price = self.contributor_price
+        else:
+            configured_price = PricingConfig.get_price(self.type, self.quality)
+            if configured_price is not None:
+                self.price = configured_price
         super().save(*args, **kwargs)
+        # Photo nouvelle ou fichier remplacé : (re)génère l'aperçu filigrané.
+        if self.type == "photo" and self.file and self.preview_source != self.file.name:
+            from .previews import build_preview
+            build_preview(self)
 
     @property
     def file_url(self):
@@ -213,8 +279,8 @@ class Media(models.Model):
 
     @property
     def file_size_display(self):
-        if self.file and self.file.size:
-            s = self.file.size
+        s = self.file_size
+        if s:
             return f"{s/1024:.0f} Ko" if s < 1048576 else f"{s/1048576:.1f} Mo"
         return "—"
 
@@ -291,10 +357,12 @@ class PaymentLog(models.Model):
 
 
 class PaymentSession(models.Model):
-    """Session de paiement (carte via FedaPay, ou mobile money / PayPal via SingPay).
+    """Session de paiement MyPVit (Airtel Money, Moov Money, Visa/Mastercard).
 
-    Créée côté serveur dès l'initiation (avant redirection vers le fournisseur), pour
-    garder le lien user + média/plan + montant quel que soit le moyen de paiement.
+    Créée côté serveur dès l'initiation, avec un montant calculé côté serveur.
+    Elle ne passe à « success » que via `media_app.payments.confirm_payment`,
+    après contre-vérification auprès de MyPVit — jamais sur la foi du client.
+    Les anciennes sessions FedaPay/SingPay sont conservées pour l'historique.
     """
 
     STATUS_CHOICES = [
@@ -303,12 +371,13 @@ class PaymentSession(models.Model):
         ("failed", "Échoué"),
     ]
     PROVIDER_CHOICES = [
-        ("fedapay", "FedaPay (carte)"),
-        ("singpay", "SingPay (mobile / PayPal)"),
+        ("mypvit", "MyPVit"),
+        ("fedapay", "FedaPay (ancien)"),
+        ("singpay", "SingPay (ancien)"),
     ]
 
     reference = models.CharField("Référence commande", max_length=255, unique=True)
-    provider = models.CharField("Fournisseur", max_length=20, choices=PROVIDER_CHOICES, default="fedapay")
+    provider = models.CharField("Fournisseur", max_length=20, choices=PROVIDER_CHOICES, default="mypvit")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -333,10 +402,24 @@ class PaymentSession(models.Model):
         blank=True,
         related_name="payment_sessions",
     )
+
+    # ─── MyPVit ───
+    # Identifiant attribué par MyPVit (réponse d'initiation ou webhook) — sert à
+    # la contre-vérification via l'API Check Status.
+    pvit_transaction_id = models.CharField("ID transaction MyPVit", max_length=100, blank=True, default="")
+    customer_account_number = models.CharField("Téléphone client", max_length=23, blank=True, default="")
+    redirect_url = models.URLField("URL formulaire carte", max_length=500, blank=True, default="")
+    fees = models.DecimalField("Frais", max_digits=12, decimal_places=2, null=True, blank=True)
+    failure_reason = models.CharField("Raison de l'échec", max_length=255, blank=True, default="")
+    raw_create_response = models.JSONField("Réponse d'initiation", default=dict, blank=True)
+    raw_webhook_payload = models.JSONField("Dernier webhook", default=dict, blank=True)
+    confirmed_at = models.DateTimeField("Confirmé le", null=True, blank=True)
+
     created_at = models.DateTimeField("Créé le", auto_now_add=True)
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [models.Index(fields=["status", "created_at"])]
         verbose_name = "Session de paiement"
         verbose_name_plural = "Sessions de paiement"
 

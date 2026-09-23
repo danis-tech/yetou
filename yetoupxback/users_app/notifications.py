@@ -1,4 +1,4 @@
-from .models import Notification
+from .models import Notification, User
 
 
 def create_notification(
@@ -25,7 +25,7 @@ def notify_welcome(user):
     create_notification(
         user,
         "welcome",
-        "Bienvenue sur Gabon Pixel !",
+        "Bienvenue sur Pixia !",
         "Explorez le catalogue aérien du Gabon et téléchargez vos médias préférés.",
         action_url="/dashboard?tab=catalogue",
     )

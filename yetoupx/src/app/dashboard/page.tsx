@@ -154,21 +154,21 @@ export default function DashboardPage() {
       buyItem,
       mediaId: buyItem.mediaId,
       method: activePayMethod,
-      onLinkOpened: () => {
-        showToast(
-          activePayMethod === "Visa" || activePayMethod === "Mastercard"
-            ? "Redirection vers le paiement sécurisé par carte…"
-            : "Finalisez le paiement dans l'onglet SingPay. Votre achat apparaîtra après confirmation.",
-        );
+      phone: clientPhone,
+      onPending: (msg) => showToast(msg),
+      onSuccess: () => {
+        showToast("Paiement confirmé ! Votre média est dans vos téléchargements.");
+        loadDashboardSummary();
+        refreshPurchases();
       },
       onError: (msg) => showToast(msg, true),
     });
 
     if (ok) setBuyItem(null);
-  }, [buyItem, activePayMethod, checkout, showToast, loadDashboardSummary, refreshPurchases]);
+  }, [buyItem, activePayMethod, clientPhone, checkout, showToast, loadDashboardSummary, refreshPurchases]);
 
   const longPressCaptureToast = useCallback(() => {
-    showToast("Capture interdite. Ce média est protégé par Gabon Pixel.", true);
+    showToast("Capture interdite. Ce média est protégé par Pixia.", true);
   }, [showToast]);
 
   const { toggleLike, loadingId: likeLoadingId } = useMediaLikes(
@@ -176,23 +176,23 @@ export default function DashboardPage() {
     (msg) => showToast(msg, true),
   );
 
-  if (isLoading || (!isLoggedIn && typeof window !== "undefined" && localStorage.getItem("yetou_token"))) {
+  if (isLoading || (!isLoggedIn && typeof window !== "undefined" && localStorage.getItem("pixia_token"))) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0A0A0F", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" }}>
-        <div style={{ width: "48px", height: "48px", borderRadius: "50%", border: "3px solid #2A2A35", borderTopColor: "#C8371A", animation: "spin 0.8s linear infinite" }} />
-        <p style={{ color: "#8A8A95", fontSize: "14px" }}>Chargement de votre espace...</p>
+      <div style={{ minHeight: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px" }}>
+        <div style={{ width: "48px", height: "48px", borderRadius: "50%", border: "3px solid var(--contour)", borderTopColor: "var(--river)", animation: "spin 0.8s linear infinite" }} />
+        <p style={{ color: "var(--ink-2)", fontSize: "14px" }}>Chargement de votre espace...</p>
       </div>
     );
   }
 
   if (!isLoggedIn || !user) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0A0A0F", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px", gap: "16px" }}>
-        <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(200,55,26,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <i className="ti ti-lock" style={{ fontSize: "28px", color: "#C8371A" }}></i>
+      <div style={{ minHeight: "100vh", background: "var(--paper)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px", gap: "16px" }}>
+        <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(47,111,115,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <i className="ti ti-lock" style={{ fontSize: "28px", color: "var(--river)" }}></i>
         </div>
-        <h2 style={{ fontFamily: "Sora, sans-serif", fontSize: "20px", fontWeight: 700, color: "#F0EFEA" }}>Accès réservé</h2>
-        <p style={{ color: "#8A8A95", fontSize: "14px", textAlign: "center", maxWidth: "400px" }}>Connectez-vous pour accéder à votre espace.</p>
+        <h2 style={{ fontFamily: "var(--font)", fontSize: "20px", fontWeight: 700, color: "var(--ink)" }}>Accès réservé</h2>
+        <p style={{ color: "var(--ink-2)", fontSize: "14px", textAlign: "center", maxWidth: "400px" }}>Connectez-vous pour accéder à votre espace.</p>
         <button className="btn-primary" onClick={() => router.push("/")} style={{ padding: "10px 24px" }}>Retour à l&apos;accueil</button>
       </div>
     );
@@ -344,12 +344,16 @@ function Sidebar({ user, plan, activeTab, purchasesCount, open, onSelectTab, onL
   return (
     <nav className={`dash-sidebar ${open ? "open" : ""}`}>
       <div className="dash-sidebar-logo" onClick={() => router.push("/")} title="Retour au site principal">
-        Gabon <em>Pixel</em>
+        Pixia
         <span>Espace client</span>
       </div>
       <button type="button" className="dash-sidebar-back-site" onClick={() => router.push("/")}>
         <i className="ti ti-arrow-left"></i>
         <span>Retour au site</span>
+      </button>
+      <button type="button" className="dash-sidebar-back-site" onClick={() => router.push("/contributeur")}>
+        <i className="ti ti-camera-plus"></i>
+        <span>Espace contributeur</span>
       </button>
       <div className="dash-sidebar-user">
         <div className="dash-sidebar-avatar">{user.name.charAt(0).toUpperCase()}</div>
@@ -472,7 +476,7 @@ function PurchasesTab({ purchases, loading, router, onDownload, remainingDownloa
                   <div className="dash-dl-desc">{item.format} · {item.price} FCFA · Paiement confirmé</div>
                   <div className="dash-dl-progress">
                     <div className="dash-dl-progress-bar">
-                      <div style={{ width: `${item.maxDownloads > 0 ? (item.downloadCount / item.maxDownloads) * 100 : 0}%`, background: exhausted ? "#C8371A" : "#22c55e" }} />
+                      <div style={{ width: `${item.maxDownloads > 0 ? (item.downloadCount / item.maxDownloads) * 100 : 0}%`, background: exhausted ? "var(--river)" : "var(--ok)" }} />
                     </div>
                     <span className={exhausted ? "dash-dl-progress--warn" : ""}>
                       {exhausted ? "Quota épuisé" : `${item.downloadCount}/${item.maxDownloads} téléch.`}
@@ -565,7 +569,7 @@ function PlanTab({ user, plan, router }: { user: { name: string; plan: UserPlan 
     <div className="dash-tab">
       <h2 className="dash-h2">Mon abonnement</h2>
       <p className="dash-sub">Détails de votre abonnement et limites</p>
-      <div className="dash-plan-card" style={{ borderColor: user.plan !== "none" ? "#C8371A" : "#2A2A35" }}>
+      <div className="dash-plan-card" style={{ borderColor: user.plan !== "none" ? "var(--river)" : "var(--contour)" }}>
         <div className="dash-plan-header">
           <div className={`dash-plan-icon ${user.plan}`}><i className={`ti ${user.plan === "pro" ? "ti-building" : user.plan === "monthly" ? "ti-crown" : "ti-photo"}`}></i></div>
           <div>
@@ -611,14 +615,14 @@ function PlanTab({ user, plan, router }: { user: { name: string; plan: UserPlan 
 function Feature({ icon, label, value, ok }: { icon: string; label: string; value: string; ok: boolean }) {
   return (
     <div className="dash-feature">
-      <i className={`ti ${icon}`} style={{ color: ok ? "#22c55e" : "#3A3A45" }}></i>
-      <div><div style={{ color: ok ? "#F0EFEA" : "#5A5A65" }}>{label}</div><div style={{ fontSize: "11px", color: ok ? "#8A8A95" : "#5A5A65" }}>{value}</div></div>
+      <i className={`ti ${icon}`} style={{ color: ok ? "var(--ok)" : "var(--contour-strong)" }}></i>
+      <div><div style={{ color: ok ? "var(--ink)" : "var(--ink-3)" }}>{label}</div><div style={{ fontSize: "11px", color: ok ? "var(--ink-2)" : "var(--ink-3)" }}>{value}</div></div>
     </div>
   );
 }
 
 function CompareRow({ label, ok }: { label: string; ok: boolean }) {
-  return <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}><i className={`ti ${ok ? "ti-check" : "ti-x"}`} style={{ color: ok ? "#22c55e" : "#3A3A45" }}></i><span style={{ color: ok ? "#F0EFEA" : "#5A5A65" }}>{label}</span></div>;
+  return <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}><i className={`ti ${ok ? "ti-check" : "ti-x"}`} style={{ color: ok ? "var(--ok)" : "var(--contour-strong)" }}></i><span style={{ color: ok ? "var(--ink)" : "var(--ink-3)" }}>{label}</span></div>;
 }
 
 /* ─── Account Tab ─── */
@@ -632,7 +636,7 @@ function AccountTab({ user, createdAt }: { user: { name: string; email: string; 
     if (!name.trim()) { showToast("Le nom ne peut pas être vide.", true); return; }
     setSaving(true);
     try {
-      const token = localStorage.getItem("yetou_token");
+      const token = localStorage.getItem("pixia_token");
       const res = await fetch(`${getApiUrl()}/users/profile/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

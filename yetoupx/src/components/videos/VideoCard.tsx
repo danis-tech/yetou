@@ -84,6 +84,9 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture, onToggl
           )}
           {video.videoUrl && (
             <video
+              controlsList="nodownload noremoteplayback noplaybackrate"
+              disablePictureInPicture
+              disableRemotePlayback
               ref={videoRef}
               src={video.videoUrl}
               muted
@@ -103,14 +106,14 @@ export default function VideoCard({ video, idx, onBuy, onContextCapture, onToggl
               onContextMenu={(e) => e.preventDefault()}
             />
           )}
-          <div className="watermark-sm">Gabon Pixel</div>
+          <div className="watermark-sm">Pixia</div>
           <div className="video-play"><i className="ti ti-player-play"></i></div>
           <div className="video-res">{video.vres}</div>
           <div className="video-dur">{video.duration}</div>
         </div>
         <div className="video-body">
           <div className="video-title">{video.title}</div>
-          <div className="video-sub">{video.details}</div>
+          <div className="video-sub">{video.contributorName ? `par ${video.contributorName}, contributeur` : video.details}</div>
           <div className="video-expand">
             <div className="video-genres">
               <span className="video-genre">

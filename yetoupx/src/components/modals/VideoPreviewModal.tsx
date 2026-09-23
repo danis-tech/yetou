@@ -18,7 +18,7 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
           position: "absolute",
           inset: 0,
           backdropFilter: "blur(8px)",
-          background: "rgba(10,10,15,0.85)",
+          background: "rgba(238,241,236,0.85)",
         }}
         onClick={onClose}
       ></div>
@@ -35,8 +35,8 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
       >
         <div
           style={{
-            background: "#14141A",
-            border: "1px solid #2A2A35",
+            background: "var(--card)",
+            border: "1px solid var(--contour)",
             borderRadius: "16px",
             maxWidth: "896px",
             width: "100%",
@@ -51,10 +51,10 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
               alignItems: "center",
               justifyContent: "space-between",
               padding: "16px",
-              borderBottom: "1px solid #2A2A35",
+              borderBottom: "1px solid var(--contour)",
             }}
           >
-            <h3 style={{ fontFamily: "Sora,sans-serif", fontWeight: 600, color: "#fff", fontSize: "14px" }}>
+            <h3 style={{ fontFamily: "var(--font)", fontWeight: 600, color: "var(--ink)", fontSize: "16px" }}>
               {video.title}
             </h3>
             <button
@@ -65,7 +65,7 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#8A8A95",
+                color: "var(--ink-2)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
@@ -80,7 +80,9 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
               key={video.videoUrl}
               style={{ width: "100%", maxHeight: "50vh", objectFit: "contain" }}
               controls
-              controlsList="nodownload"
+              controlsList="nodownload noremoteplayback noplaybackrate"
+              disableRemotePlayback
+              disablePictureInPicture
               playsInline
               muted
               autoPlay
@@ -95,9 +97,9 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
                 top: "10px",
                 right: "10px",
                 zIndex: 20,
-                background: "rgba(200,55,26,0.9)",
+                background: "rgba(47,111,115,0.9)",
                 color: "#fff",
-                fontSize: "10px",
+                fontSize: "12px",
                 fontWeight: 700,
                 padding: "4px 12px",
                 borderRadius: "6px",
@@ -118,16 +120,16 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
               }}
             >
               <div>
-                <p style={{ color: "#8A8A95", fontSize: "13px", marginBottom: "4px" }}>{video.details}</p>
+                <p style={{ color: "var(--ink-2)", fontSize: "13px", marginBottom: "4px" }}>{video.details}</p>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span
                     style={{
                       fontSize: "11px",
-                      background: "#14141A",
-                      border: "1px solid #2A2A35",
+                      background: "var(--card)",
+                      border: "1px solid var(--contour)",
                       padding: "2px 8px",
                       borderRadius: "4px",
-                      color: "#8A8A95",
+                      color: "var(--ink-2)",
                     }}
                   >
                     {video.format}
@@ -135,11 +137,11 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
                   <span
                     style={{
                       fontSize: "11px",
-                      background: "#14141A",
-                      border: "1px solid #2A2A35",
+                      background: "var(--card)",
+                      border: "1px solid var(--contour)",
                       padding: "2px 8px",
                       borderRadius: "4px",
-                      color: "#8A8A95",
+                      color: "var(--ink-2)",
                     }}
                   >
                     {video.duration}
@@ -147,10 +149,10 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "Sora,sans-serif", fontWeight: 700, fontSize: "22px", color: "#fff" }}>
+                <div style={{ fontFamily: "var(--font)", fontWeight: 700, fontSize: "22px", color: "var(--ink)" }}>
                   {video.price}
                 </div>
-                <p style={{ color: "#8A8A95", fontSize: "11px" }}>Paiement sécurisé</p>
+                <p style={{ color: "var(--ink-2)", fontSize: "11px" }}>Paiement sécurisé</p>
               </div>
             </div>
             <div style={{ display: "flex", gap: "12px" }}>
@@ -166,7 +168,7 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
                 style={{
                   flex: 1,
                   padding: "12px",
-                  background: "#C8371A",
+                  background: "var(--river)",
                   color: "#fff",
                   borderRadius: "8px",
                   border: "none",
@@ -184,8 +186,8 @@ export default function VideoPreviewModal({ video, onClose, onBuy }: VideoPrevie
               <button
                 style={{
                   padding: "12px 16px",
-                  border: "1px solid #2A2A35",
-                  color: "#8A8A95",
+                  border: "1px solid var(--contour)",
+                  color: "var(--ink-2)",
                   borderRadius: "8px",
                   background: "transparent",
                   cursor: "pointer",

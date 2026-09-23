@@ -26,6 +26,6 @@ describe("Toast", () => {
   it("should apply error styles when isError", () => {
     render(<Toast message="Error" visible={true} isError={true} />);
     const toastEl = screen.getByText("Error").closest(".toast");
-    expect(toastEl).toHaveStyle({ borderColor: "#C8371A", background: "#1a0e0b" });
+    expect(toastEl).toHaveStyle({ borderColor: "var(--danger)", background: "#F7E7E3" });
   });
 });

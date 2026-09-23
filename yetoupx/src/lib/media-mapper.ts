@@ -24,9 +24,10 @@ export function mapApiMediaToPhoto(m: ApiMedia): Photo {
     likes: m.likes_count ?? 0,
     isLiked: m.is_liked ?? false,
     createdAt: m.created_at,
+    contributorName: m.contributor_name || "",
     searchIndex: buildSearchIndex(
       m.title, m.category_display, m.category, m.quality, m.quality_display,
-      m.resolution, m.province, m.city, m.tags, m.license_type,
+      m.resolution, m.province, m.city, m.tags, m.license_type, m.contributor_name,
     ),
   };
 }
@@ -48,6 +49,7 @@ export function mapApiMediaToVideo(m: ApiMedia): Video {
     likes: m.likes_count ?? 0,
     isLiked: m.is_liked ?? false,
     createdAt: m.created_at,
+    contributorName: m.contributor_name || "",
     searchIndex: buildSearchIndex(
       m.title, m.category_display, m.category, m.quality, m.quality_display,
       m.duration, m.province, m.city, m.tags,

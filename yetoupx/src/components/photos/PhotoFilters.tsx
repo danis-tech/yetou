@@ -32,7 +32,7 @@ export default function PhotoFilters({
   const reses = ["all", ...pricing.pricing.photo.map((r) => r.quality)];
   const resLabels: Record<string, string> = { all: "Toutes" };
   pricing.pricing.photo.forEach((r) => {
-    resLabels[r.quality] = `${r.quality_display} — ${formatFcfa(r.price)}`;
+    resLabels[r.quality] = `${r.quality_display} (${formatFcfa(r.price)})`;
   });
 
   return (

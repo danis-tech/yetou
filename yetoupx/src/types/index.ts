@@ -12,6 +12,7 @@ export interface Photo {
   isLiked: boolean;
   createdAt: string;
   searchIndex: string;
+  contributorName?: string;
 }
 
 export interface Video {
@@ -31,6 +32,7 @@ export interface Video {
   isLiked: boolean;
   createdAt: string;
   searchIndex: string;
+  contributorName?: string;
 }
 
 export type Tab = "photos" | "videos" | "tarifs";
@@ -44,6 +46,8 @@ export interface BuyItem {
   img: string;
   mediaId?: number;
   _type?: "photo" | "video";
+  /** Abonnement payé (au lieu d'un média). */
+  plan?: "monthly" | "pro";
 }
 
 export interface PurchasedItem extends BuyItem {

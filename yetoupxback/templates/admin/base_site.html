@@ -1,16 +1,16 @@
 {% extends "admin/base.html" %}
 {% load i18n %}
 
-{% block title %}Gabon Pixel – Administration{% endblock %}
+{% block title %}Pixia – Administration{% endblock %}
 {% block branding %}
-<h1 id="site-name">Gabon <em>Pixel</em> <span>administration</span></h1>
+<h1 id="site-name">Pixia <span>administration</span></h1>
 {% endblock %}
 
 {% block extrahead %}
 {{ block.super }}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/dist/tabler-icons.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css">
 <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
@@ -35,24 +35,24 @@
   /* Aperçu média (photo/vidéo) en modal, sans quitter l'interface admin */
   document.addEventListener('DOMContentLoaded', function() {
     const modal = document.createElement('div');
-    modal.className = 'yetou-media-modal';
+    modal.className = 'pixia-media-modal';
     modal.hidden = true;
     modal.innerHTML =
-      '<div class="yetou-media-modal-backdrop"></div>' +
-      '<div class="yetou-media-modal-dialog">' +
-        '<button type="button" class="yetou-media-modal-close" aria-label="Fermer">&times;</button>' +
-        '<div class="yetou-media-modal-title"></div>' +
-        '<div class="yetou-media-modal-body"></div>' +
+      '<div class="pixia-media-modal-backdrop"></div>' +
+      '<div class="pixia-media-modal-dialog">' +
+        '<button type="button" class="pixia-media-modal-close" aria-label="Fermer">&times;</button>' +
+        '<div class="pixia-media-modal-title"></div>' +
+        '<div class="pixia-media-modal-body"></div>' +
       '</div>';
     document.body.appendChild(modal);
 
-    const bodyEl = modal.querySelector('.yetou-media-modal-body');
-    const titleEl = modal.querySelector('.yetou-media-modal-title');
+    const bodyEl = modal.querySelector('.pixia-media-modal-body');
+    const titleEl = modal.querySelector('.pixia-media-modal-title');
 
     function closeModal() {
       modal.hidden = true;
       bodyEl.innerHTML = '';
-      document.body.classList.remove('yetou-modal-open');
+      document.body.classList.remove('pixia-modal-open');
     }
 
     function openModal(type, src, poster, title) {
@@ -74,17 +74,17 @@
       }
       bodyEl.appendChild(el);
       modal.hidden = false;
-      document.body.classList.add('yetou-modal-open');
+      document.body.classList.add('pixia-modal-open');
     }
 
     document.addEventListener('click', function(e) {
-      const trigger = e.target.closest('.yetou-media-preview');
+      const trigger = e.target.closest('.pixia-media-preview');
       if (trigger) {
         e.preventDefault();
         openModal(trigger.dataset.type, trigger.dataset.src, trigger.dataset.poster, trigger.dataset.title);
         return;
       }
-      if (!modal.hidden && (e.target.closest('.yetou-media-modal-close') || e.target.classList.contains('yetou-media-modal-backdrop'))) {
+      if (!modal.hidden && (e.target.closest('.pixia-media-modal-close') || e.target.classList.contains('pixia-media-modal-backdrop'))) {
         closeModal();
       }
     });
@@ -99,204 +99,183 @@
      THÈME CLAIR / SOMBRE
      Django 6 gère nativement 3 états sur <html data-theme="dark|light|auto">
      (bouton en haut à droite, persisté en localStorage). On définit ici DEUX
-     palettes complètes de marque Gabon Pixel (sombre = défaut, claire = alternative)
+     palettes complètes de marque Pixia (sombre = défaut, claire = alternative)
      en redéfinissant TOUTES les variables CSS utilisées par l'admin natif
      (base.css / dark_mode.css / forms.css / widgets.css), pour qu'aucune
      couleur par défaut de Django (bleu/jaune Django) ne puisse transparaître
-     et jurer avec l'identité Gabon Pixel, quel que soit le mode choisi.
+     et jurer avec l'identité Pixia, quel que soit le mode choisi.
      ═══════════════════════════════════════════════════════════════════════ */
 
   :root {
-    /* Constantes indépendantes du thème */
-    --font-family-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-family-monospace: 'Fira Code', 'Consolas', monospace;
-    --header-height: 50px;
-    --primary: #C8371A;
-    --primary-dark: #A52D16;
+    /* Constantes indépendantes du thème — palette « relevé topographique »,
+       identique au site public (voir yetoupx/src/app/globals.css). */
+    --font-family-primary: 'Familjen Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-family-monospace: 'Consolas', monospace;
+    --header-height: 56px;
+    --primary: #2F6F73;
+    --primary-dark: #22565A;
     --primary-fg: #ffffff;
-    --secondary: #A52D16;
-    --accent: #F5C77E;
-    --button-bg: #C8371A;
-    --button-hover-bg: #A52D16;
+    --secondary: #22565A;
+    --accent: #D9A441;
+    --beacon: #D9A441;
+    --button-bg: #2F6F73;
+    --button-hover-bg: #22565A;
     --button-fg: #ffffff;
-    --default-button-bg: #C8371A;
-    --default-button-hover-bg: #A52D16;
-    --delete-button-bg: #C8371A;
-    --delete-button-hover-bg: #A52D16;
+    --default-button-bg: #14233A;
+    --default-button-hover-bg: #0B1626;
+    --delete-button-bg: #B3412E;
+    --delete-button-hover-bg: #93321F;
   }
 
-  /* ── Sombre (par défaut, et mode explicite "dark") ── */
-  :root, html[data-theme="dark"] {
-    --body-bg: #0A0A0F;
-    --body-fg: #F0EFEA;
-    --body-quiet-color: #8A8A95;
-    --body-medium-color: #C7C6C9;
-    --body-loud-color: #ffffff;
-    --darkened-bg: #14141A;
-    --selected-bg: rgba(200,55,26,0.15);
-    --selected-row: rgba(200,55,26,0.08);
-    --link-fg: #C8371A;
-    --link-hover-color: #e04528;
-    --link-selected-fg: #e04528;
-    --breadcrumbs-bg: #14141A;
-    --breadcrumbs-fg: #C8371A;
-    --breadcrumbs-link-fg: #8A8A95;
-    --header-bg: #050508;
-    --header-color: #F0EFEA;
-    --header-link-color: #F0EFEA;
-    --header-branding-color: #F0EFEA;
-    --header-logo-color: #F0EFEA;
-    --close-button-bg: #2A2A35;
-    --close-button-hover-bg: #3A3A45;
-    --object-tools-bg: #14141A;
-    --object-tools-hover-bg: #1A1A25;
-    --object-tools-fg: #F0EFEA;
-    --border-color: #2A2A35;
-    --hairline-color: #2A2A35;
-    --input-bg: #0A0A0F;
-    --input-fg: #F0EFEA;
-    --input-border: #2A2A35;
-    --error-fg: #FF6B6B;
-    --message-success-bg: rgba(34,197,94,0.14);
-    --message-warning-bg: rgba(255,179,0,0.14);
-    --message-error-bg: rgba(200,55,26,0.14);
-    --message-info-bg: rgba(58,146,255,0.16);
-    --message-debug-bg: #1A1A22;
-    --card-bg: #14141A;
-    --card-bg-soft: #1A1A22;
-    --shadow-color: rgba(0,0,0,0.45);
+  /* ── Clair : papier de relevé (défaut, et mode explicite "light") ── */
+  :root, html[data-theme="light"] {
+    --body-bg: #EEF1EC;
+    --body-fg: #14233A;
+    --body-quiet-color: #4D5C6B;
+    --body-medium-color: #33424F;
+    --body-loud-color: #0B1626;
+    --darkened-bg: #F8FAF7;
+    --selected-bg: rgba(47,111,115,0.10);
+    --selected-row: rgba(47,111,115,0.06);
+    --link-fg: #2F6F73;
+    --link-hover-color: #22565A;
+    --link-selected-fg: #22565A;
+    --breadcrumbs-bg: #F8FAF7;
+    --breadcrumbs-fg: #22565A;
+    --breadcrumbs-link-fg: #4D5C6B;
+    --header-bg: #F8FAF7;
+    --header-color: #14233A;
+    --header-link-color: #14233A;
+    --header-branding-color: #14233A;
+    --header-logo-color: #14233A;
+    --close-button-bg: #E2E7E0;
+    --close-button-hover-bg: #C9D2CB;
+    --object-tools-bg: #F8FAF7;
+    --object-tools-hover-bg: #E2E7E0;
+    --object-tools-fg: #14233A;
+    --border-color: #C9D2CB;
+    --hairline-color: #DDE3DC;
+    --input-bg: #FFFFFF;
+    --input-fg: #14233A;
+    --input-border: #A3B1A8;
+    --error-fg: #B3412E;
+    --message-success-bg: rgba(47,125,79,0.12);
+    --message-warning-bg: rgba(217,164,65,0.18);
+    --message-error-bg: rgba(179,65,46,0.10);
+    --message-info-bg: rgba(47,94,158,0.12);
+    --message-debug-bg: #E2E7E0;
+    --card-bg: #F8FAF7;
+    --card-bg-soft: #F1F4EF;
+    --shadow-color: rgba(20,35,58,0.10);
+    --paper: #EEF1EC;
+    --card: #F8FAF7;
+    --ink: #14233A;
+    --ink-2: #4D5C6B;
+    --contour: #C9D2CB;
+    --chart-1: #00909A;
+    --chart-2: #B07A1E;
+    color-scheme: light;
+  }
+
+  /* ── Sombre : relevé de nuit, tiré de l'encre bleu-nuit ── */
+  html[data-theme="dark"] {
+    --body-bg: #0F1A2B;
+    --body-fg: #E3EAE6;
+    --body-quiet-color: #9AA9B6;
+    --body-medium-color: #C4CFD6;
+    --body-loud-color: #FFFFFF;
+    --darkened-bg: #16243A;
+    --selected-bg: rgba(95,163,166,0.16);
+    --selected-row: rgba(95,163,166,0.08);
+    --link-fg: #6FB3B5;
+    --link-hover-color: #93CACB;
+    --link-selected-fg: #93CACB;
+    --breadcrumbs-bg: #16243A;
+    --breadcrumbs-fg: #93CACB;
+    --breadcrumbs-link-fg: #9AA9B6;
+    --header-bg: #0B1422;
+    --header-color: #E3EAE6;
+    --header-link-color: #E3EAE6;
+    --header-branding-color: #E3EAE6;
+    --header-logo-color: #E3EAE6;
+    --close-button-bg: #243650;
+    --close-button-hover-bg: #2F4563;
+    --object-tools-bg: #16243A;
+    --object-tools-hover-bg: #1D2E48;
+    --object-tools-fg: #E3EAE6;
+    --border-color: #2A3B52;
+    --hairline-color: #223149;
+    --input-bg: #0B1422;
+    --input-fg: #E3EAE6;
+    --input-border: #34496A;
+    --error-fg: #E48A77;
+    --message-success-bg: rgba(95,180,130,0.16);
+    --message-warning-bg: rgba(217,164,65,0.18);
+    --message-error-bg: rgba(228,138,119,0.14);
+    --message-info-bg: rgba(120,160,220,0.16);
+    --message-debug-bg: #16243A;
+    --card-bg: #16243A;
+    --card-bg-soft: #1B2B44;
+    --shadow-color: rgba(0,0,0,0.35);
+    --paper: #0F1A2B;
+    --card: #16243A;
+    --ink: #E3EAE6;
+    --ink-2: #9AA9B6;
+    --contour: #2A3B52;
+    --chart-1: #12A2AB;
+    --chart-2: #BA8526;
     color-scheme: dark;
   }
   @media (prefers-color-scheme: dark) {
     html[data-theme="auto"] {
-      --body-bg: #0A0A0F;
-      --body-fg: #F0EFEA;
-      --body-quiet-color: #8A8A95;
-      --body-medium-color: #C7C6C9;
-      --body-loud-color: #ffffff;
-      --darkened-bg: #14141A;
-      --selected-bg: rgba(200,55,26,0.15);
-      --selected-row: rgba(200,55,26,0.08);
-      --link-fg: #C8371A;
-      --link-hover-color: #e04528;
-      --link-selected-fg: #e04528;
-      --breadcrumbs-bg: #14141A;
-      --breadcrumbs-fg: #C8371A;
-      --breadcrumbs-link-fg: #8A8A95;
-      --header-bg: #050508;
-      --header-color: #F0EFEA;
-      --header-link-color: #F0EFEA;
-      --header-branding-color: #F0EFEA;
-      --header-logo-color: #F0EFEA;
-      --close-button-bg: #2A2A35;
-      --close-button-hover-bg: #3A3A45;
-      --object-tools-bg: #14141A;
-      --object-tools-hover-bg: #1A1A25;
-      --object-tools-fg: #F0EFEA;
-      --border-color: #2A2A35;
-      --hairline-color: #2A2A35;
-      --input-bg: #0A0A0F;
-      --input-fg: #F0EFEA;
-      --input-border: #2A2A35;
-      --error-fg: #FF6B6B;
-      --message-success-bg: rgba(34,197,94,0.14);
-      --message-warning-bg: rgba(255,179,0,0.14);
-      --message-error-bg: rgba(200,55,26,0.14);
-      --message-info-bg: rgba(58,146,255,0.16);
-      --message-debug-bg: #1A1A22;
-      --card-bg: #14141A;
-      --card-bg-soft: #1A1A22;
-      --shadow-color: rgba(0,0,0,0.45);
+      --body-bg: #0F1A2B;
+      --body-fg: #E3EAE6;
+      --body-quiet-color: #9AA9B6;
+      --body-medium-color: #C4CFD6;
+      --body-loud-color: #FFFFFF;
+      --darkened-bg: #16243A;
+      --selected-bg: rgba(95,163,166,0.16);
+      --selected-row: rgba(95,163,166,0.08);
+      --link-fg: #6FB3B5;
+      --link-hover-color: #93CACB;
+      --link-selected-fg: #93CACB;
+      --breadcrumbs-bg: #16243A;
+      --breadcrumbs-fg: #93CACB;
+      --breadcrumbs-link-fg: #9AA9B6;
+      --header-bg: #0B1422;
+      --header-color: #E3EAE6;
+      --header-link-color: #E3EAE6;
+      --header-branding-color: #E3EAE6;
+      --header-logo-color: #E3EAE6;
+      --close-button-bg: #243650;
+      --close-button-hover-bg: #2F4563;
+      --object-tools-bg: #16243A;
+      --object-tools-hover-bg: #1D2E48;
+      --object-tools-fg: #E3EAE6;
+      --border-color: #2A3B52;
+      --hairline-color: #223149;
+      --input-bg: #0B1422;
+      --input-fg: #E3EAE6;
+      --input-border: #34496A;
+      --error-fg: #E48A77;
+      --message-success-bg: rgba(95,180,130,0.16);
+      --message-warning-bg: rgba(217,164,65,0.18);
+      --message-error-bg: rgba(228,138,119,0.14);
+      --message-info-bg: rgba(120,160,220,0.16);
+      --message-debug-bg: #16243A;
+      --card-bg: #16243A;
+      --card-bg-soft: #1B2B44;
+      --shadow-color: rgba(0,0,0,0.35);
+      --paper: #0F1A2B;
+      --card: #16243A;
+      --ink: #E3EAE6;
+      --ink-2: #9AA9B6;
+      --contour: #2A3B52;
+      --chart-1: #12A2AB;
+      --chart-2: #BA8526;
       color-scheme: dark;
     }
   }
-
-  /* ── Clair (mode explicite "light") ── */
-  html[data-theme="light"] {
-    --body-bg: #F3F1EC;
-    --body-fg: #1B1A1D;
-    --body-quiet-color: #6D6B72;
-    --body-medium-color: #45434A;
-    --body-loud-color: #0A0A0F;
-    --darkened-bg: #FFFFFF;
-    --selected-bg: rgba(200,55,26,0.08);
-    --selected-row: rgba(200,55,26,0.05);
-    --link-fg: #C8371A;
-    --link-hover-color: #A52D16;
-    --link-selected-fg: #A52D16;
-    --breadcrumbs-bg: #FFFFFF;
-    --breadcrumbs-fg: #A52D16;
-    --breadcrumbs-link-fg: #6D6B72;
-    --header-bg: #FFFFFF;
-    --header-color: #1B1A1D;
-    --header-link-color: #1B1A1D;
-    --header-branding-color: #1B1A1D;
-    --header-logo-color: #1B1A1D;
-    --close-button-bg: #E7E4DD;
-    --close-button-hover-bg: #DAD6CC;
-    --object-tools-bg: #FFFFFF;
-    --object-tools-hover-bg: #F3F1EC;
-    --object-tools-fg: #1B1A1D;
-    --border-color: #E3E0D8;
-    --hairline-color: #EBE8E1;
-    --input-bg: #FFFFFF;
-    --input-fg: #1B1A1D;
-    --input-border: #DAD6CC;
-    --error-fg: #C0261B;
-    --message-success-bg: rgba(34,197,94,0.12);
-    --message-warning-bg: rgba(245,158,11,0.16);
-    --message-error-bg: rgba(200,55,26,0.10);
-    --message-info-bg: rgba(37,99,235,0.10);
-    --message-debug-bg: #EDEBE4;
-    --card-bg: #FFFFFF;
-    --card-bg-soft: #F7F5F0;
-    --shadow-color: rgba(20,15,10,0.08);
-    color-scheme: light;
-  }
-  @media (prefers-color-scheme: light) {
-    html[data-theme="auto"] {
-      --body-bg: #F3F1EC;
-      --body-fg: #1B1A1D;
-      --body-quiet-color: #6D6B72;
-      --body-medium-color: #45434A;
-      --body-loud-color: #0A0A0F;
-      --darkened-bg: #FFFFFF;
-      --selected-bg: rgba(200,55,26,0.08);
-      --selected-row: rgba(200,55,26,0.05);
-      --link-fg: #C8371A;
-      --link-hover-color: #A52D16;
-      --link-selected-fg: #A52D16;
-      --breadcrumbs-bg: #FFFFFF;
-      --breadcrumbs-fg: #A52D16;
-      --breadcrumbs-link-fg: #6D6B72;
-      --header-bg: #FFFFFF;
-      --header-color: #1B1A1D;
-      --header-link-color: #1B1A1D;
-      --header-branding-color: #1B1A1D;
-      --header-logo-color: #1B1A1D;
-      --close-button-bg: #E7E4DD;
-      --close-button-hover-bg: #DAD6CC;
-      --object-tools-bg: #FFFFFF;
-      --object-tools-hover-bg: #F3F1EC;
-      --object-tools-fg: #1B1A1D;
-      --border-color: #E3E0D8;
-      --hairline-color: #EBE8E1;
-      --input-bg: #FFFFFF;
-      --input-fg: #1B1A1D;
-      --input-border: #DAD6CC;
-      --error-fg: #C0261B;
-      --message-success-bg: rgba(34,197,94,0.12);
-      --message-warning-bg: rgba(245,158,11,0.16);
-      --message-error-bg: rgba(200,55,26,0.10);
-      --message-info-bg: rgba(37,99,235,0.10);
-      --message-debug-bg: #EDEBE4;
-      --card-bg: #FFFFFF;
-      --card-bg-soft: #F7F5F0;
-      --shadow-color: rgba(20,15,10,0.08);
-      color-scheme: light;
-    }
-  }
-
   /* Corrections ponctuelles : certains composants natifs Django réutilisent
      une variable (ex. --header-link-color) à la fois pour le texte du header
      ET pour du texte blanc sur un fond orange (--primary) ; on force donc le
@@ -311,13 +290,13 @@
   .calendarbox, .clockbox { box-shadow: 0 12px 32px var(--shadow-color); }
 
   body { font-family: var(--font-family-primary); font-size: 13px; transition: background-color .15s, color .15s; }
-  body.login { background: #0A0A0F !important; }
+  body.login { background: var(--body-bg) !important; }
 
   #header {
     height: var(--header-height); background: var(--header-bg);
     border-bottom: 1px solid var(--border-color); color: var(--header-color);
   }
-  #header h1 { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; padding: 0 16px; }
+  #header h1 { font-family: var(--font-family-primary); font-size: 16px; font-weight: 700; padding: 0 16px; }
   #header h1 em { color: var(--primary); font-style: normal; }
   #header h1 span { font-size: 10px; font-weight: 400; color: var(--body-quiet-color); margin-left: 6px; }
 
@@ -331,8 +310,8 @@
 
   .module h2, .module caption {
     background: var(--darkened-bg); color: var(--body-fg);
-    font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.5px;
+    font-family: var(--font-family-primary); font-size: 12px; font-weight: 600;
+     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border-color);
   }
   .module { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 20px; background: var(--darkened-bg); }
@@ -345,7 +324,7 @@
   .breadcrumbs a:hover { color: var(--primary); }
 
   #content { padding: 20px; }
-  #content h1 { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 700; color: var(--body-fg); }
+  #content h1 { font-family: var(--font-family-primary); font-size: 18px; font-weight: 700; color: var(--body-fg); }
 
   a:link, a:visited { color: var(--link-fg); }
   a:focus, a:hover { color: var(--link-hover-color); }
@@ -356,7 +335,7 @@
     border-radius: 6px; padding: 8px 12px; font-size: 13px; font-family: inherit;
   }
   input[type="text"]:focus, input[type="password"]:focus, textarea:focus, select:focus {
-    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(200,55,26,0.12); outline: none;
+    border-color: var(--primary); box-shadow: 0 0 0 3px rgba(47,111,115,0.12); outline: none;
   }
   select { background: var(--input-bg); }
   select option { background: var(--darkened-bg); color: var(--body-fg); }
@@ -387,7 +366,7 @@
   table { border-collapse: separate; border-spacing: 0; }
   thead th {
     background: var(--darkened-bg); color: var(--body-quiet-color);
-    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    font-size: 10px; font-weight: 700;  letter-spacing: 0.5px;
     padding: 10px 12px; border-bottom: 1px solid var(--border-color);
   }
   tbody td, tbody th {
@@ -407,7 +386,7 @@
   .messagelist { padding: 0 20px; }
   .success { background: var(--message-success-bg); border: 1px solid rgba(34,197,94,0.2); border-radius: 8px; color: var(--body-fg); }
   .warning { background: var(--message-warning-bg); border: 1px solid rgba(255,179,0,0.2); border-radius: 8px; }
-  .errornote { background: var(--message-error-bg); border: 1px solid rgba(200,55,26,0.2); border-radius: 8px; }
+  .errornote { background: var(--message-error-bg); border: 1px solid rgba(47,111,115,0.2); border-radius: 8px; }
 
   /* ─── Page de connexion ─── */
   .login #header { display: none; }
@@ -415,9 +394,10 @@
 
   body.login {
     background:
-      radial-gradient(600px circle at 15% 20%, rgba(200,55,26,0.14), transparent 60%),
-      radial-gradient(700px circle at 85% 85%, rgba(200,55,26,0.10), transparent 60%),
-      #0A0A0F !important;
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='480' viewBox='0 0 480 480' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23A3B1A8' stroke-opacity='.45' stroke-width='1'%3E%3Cpath d='M-20 90c90-60 170 40 270-10s180-50 250 20'/%3E%3Cpath d='M-20 190c100-50 180 50 280 0s160-40 240 24'/%3E%3Cpath d='M-20 300c90-40 190 40 270-8s170-56 250 12'/%3E%3Cpath d='M-20 410c110-36 180 32 280-12s160-32 240 16'/%3E%3C/g%3E%3C/svg%3E"),
+      var(--body-bg) !important;
+    background-repeat: no-repeat !important;
+    background-size: 100% 100% !important;
   }
 
   /* Neutralise tout fond/bordure hérité du thème clair/sombre natif de Django
@@ -462,12 +442,12 @@
   /* En-tête de marque au-dessus de la carte */
   .login-brand { text-align: center; margin-bottom: 28px; }
   .login-brand-title {
-    font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 800;
-    letter-spacing: -0.5px; color: #F0EFEA; margin: 0 0 6px;
+    font-family: var(--font-family-primary); font-size: 34px; font-weight: 700;
+    letter-spacing: -0.03em; color: var(--body-fg); margin: 0 0 6px;
   }
-  .login-brand-title em { color: var(--primary); font-style: normal; }
+  .login-brand-title::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 12px; vertical-align: 0.12em; border-radius: 50%; background: var(--beacon); box-shadow: 0 0 0 3px var(--body-bg), 0 0 0 5px var(--body-fg); }
   .login-brand-subtitle {
-    font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase;
+    font-size: 14px; font-weight: 400; 
     color: var(--body-quiet-color); margin: 0;
   }
 
@@ -476,18 +456,14 @@
     float: none;
     box-sizing: border-box;
     width: 100%;
-    background: linear-gradient(180deg, #16161D 0%, #101015 100%);
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
-    border-radius: 18px;
-    padding: 38px 34px 32px;
-    box-shadow: 0 30px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    border-radius: 8px;
+    padding: 32px 30px 28px;
+    box-shadow: 0 18px 40px var(--shadow-color);
     overflow: hidden;
   }
-  .login #content-main::before {
-    content: "";
-    position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, var(--primary), #e0663f, var(--primary));
-  }
+
 
   .login #content-title { display: none; }
 
@@ -503,7 +479,7 @@
   .login .form-row label {
     font-size: 11px;
     font-weight: 700;
-    text-transform: uppercase;
+    
     letter-spacing: 0.5px;
     color: var(--body-quiet-color);
   }
@@ -512,14 +488,14 @@
     box-sizing: border-box;
     padding: 11px 14px;
     font-size: 13px;
-    background: #0A0A0F;
+    background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 9px;
     transition: border-color .15s, box-shadow .15s;
   }
   .login .form-row input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(200,55,26,0.15);
+    box-shadow: 0 0 0 3px rgba(47,111,115,0.15);
     outline: none;
   }
 
@@ -546,14 +522,12 @@
     font-weight: 700;
     letter-spacing: 0.3px;
     border-radius: 9px;
-    background: linear-gradient(135deg, var(--primary), #A52D16);
-    box-shadow: 0 8px 20px rgba(200,55,26,0.3);
+    background: var(--primary);
+    box-shadow: none;
     transition: transform .15s, box-shadow .15s, background .15s;
   }
   .login .submit-row input[type="submit"]:hover {
-    background: linear-gradient(135deg, #e04528, var(--primary));
-    box-shadow: 0 10px 24px rgba(200,55,26,0.4);
-    transform: translateY(-1px);
+    background: var(--primary-dark);
   }
   .login .submit-row input[type="submit"]:active { transform: translateY(0); }
 
@@ -562,7 +536,7 @@
     background: var(--darkened-bg); border: 1px solid var(--border-color);
     border-radius: 8px; padding: 16px; margin-right: 0;
   }
-  #content-related h2 { font-family: 'Sora', sans-serif; font-size: 12px; }
+  #content-related h2 { font-family: var(--font-family-primary); font-size: 12px; }
   #content-related h3 { color: var(--body-fg); font-size: 12px; }
 
   /* Hide sidebar on main index */
@@ -644,10 +618,10 @@
     padding: 12px;
   }
   #changelist-filter h2 {
-    font-family: 'Sora', sans-serif;
+    font-family: var(--font-family-primary);
     font-size: 11px;
     font-weight: 700;
-    text-transform: uppercase;
+    
     color: var(--body-quiet-color);
     margin-bottom: 8px;
   }
@@ -703,7 +677,7 @@
     padding: 0 0 7px;
     font-size: 11px;
     font-weight: 700;
-    text-transform: uppercase;
+    
     letter-spacing: 0.4px;
     color: var(--body-quiet-color);
   }
@@ -757,7 +731,7 @@
   }
   .submit-row input[name="_addanother"]:hover,
   .submit-row input[name="_continue"]:hover {
-    border-color: var(--primary); color: var(--primary); background: rgba(200,55,26,0.08);
+    border-color: var(--primary); color: var(--primary); background: rgba(47,111,115,0.08);
   }
   .submit-row p.deletelink-box,
   .submit-row .deletelink-box {
@@ -788,32 +762,32 @@
   }
 
   /* ─── Modal aperçu média (photo / vidéo) ─── */
-  body.yetou-modal-open { overflow: hidden; }
-  .yetou-media-modal { position: fixed; inset: 0; z-index: 10000; }
-  .yetou-media-modal[hidden] { display: none; }
-  .yetou-media-modal-backdrop {
+  body.pixia-modal-open { overflow: hidden; }
+  .pixia-media-modal { position: fixed; inset: 0; z-index: 10000; }
+  .pixia-media-modal[hidden] { display: none; }
+  .pixia-media-modal-backdrop {
     position: absolute; inset: 0; background: rgba(5,5,8,0.85); backdrop-filter: blur(3px);
   }
-  .yetou-media-modal-dialog {
+  .pixia-media-modal-dialog {
     position: relative; max-width: min(90vw, 900px); max-height: 90vh; margin: 5vh auto;
     background: var(--darkened-bg); border: 1px solid var(--border-color); border-radius: 12px;
     padding: 16px; box-shadow: 0 25px 60px rgba(0,0,0,0.55);
     display: flex; flex-direction: column; align-items: center; gap: 10px;
   }
-  .yetou-media-modal-title {
-    align-self: flex-start; color: var(--body-fg); font-family: 'Sora', sans-serif;
+  .pixia-media-modal-title {
+    align-self: flex-start; color: var(--body-fg); font-family: var(--font-family-primary);
     font-size: 13px; font-weight: 600; padding-right: 30px;
   }
-  .yetou-media-modal-body { display: flex; align-items: center; justify-content: center; width: 100%; }
-  .yetou-media-modal-body img, .yetou-media-modal-body video {
+  .pixia-media-modal-body { display: flex; align-items: center; justify-content: center; width: 100%; }
+  .pixia-media-modal-body img, .pixia-media-modal-body video {
     max-width: 100%; max-height: 78vh; border-radius: 8px; display: block; background: #000;
   }
-  .yetou-media-modal-close {
+  .pixia-media-modal-close {
     position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%;
     background: var(--close-button-bg); color: var(--body-fg); border: none; cursor: pointer;
     font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center;
   }
-  .yetou-media-modal-close:hover { background: var(--primary); color: #fff; }
+  .pixia-media-modal-close:hover { background: var(--primary); color: #fff; }
 </style>
 {% endblock %}
 

@@ -19,8 +19,8 @@ for model in (Group, Site, TokenProxy):
     except admin.sites.NotRegistered:
         pass
 
-admin.site.site_header = "Gabon Pixel Administration"
-admin.site.site_title = "Gabon Pixel Admin"
+admin.site.site_header = "Pixia Administration"
+admin.site.site_title = "Pixia Admin"
 admin.site.index_title = "Tableau de bord"
 
 original_index = admin.site.index
@@ -61,6 +61,19 @@ def admin_index(request, extra_context=None):
     extra_context["total_media"] = Media.objects.filter(status="published").count()
     extra_context["total_purchases"] = Purchase.objects.filter(paid_filter).count()
     extra_context["total_revenue"] = Purchase.objects.filter(paid_filter).aggregate(s=Sum("price"))["s"] or 0
+
+    # ─── Contributeurs : ce qui attend une action de l'équipe ───
+    from django.urls import reverse
+    from contributors.models import ContributorProfile, PayoutRequest
+
+    pending_payouts = PayoutRequest.objects.filter(status="requested")
+    extra_context["contrib_pending_media"] = Media.objects.filter(status="pending", contributor__isnull=False).count()
+    extra_context["contrib_pending_payouts"] = pending_payouts.count()
+    extra_context["contrib_pending_payout_amount"] = pending_payouts.aggregate(s=Sum("amount"))["s"] or 0
+    extra_context["contrib_count"] = ContributorProfile.objects.filter(status="active").count()
+    extra_context["contrib_review_url"] = reverse("admin:media_app_media_changelist") + "?status__exact=pending"
+    extra_context["contrib_payouts_url"] = reverse("admin:contributors_payoutrequest_changelist") + "?status__exact=requested"
+    extra_context["contrib_profiles_url"] = reverse("admin:contributors_contributorprofile_changelist")
 
     extra_context["recent_purchases"] = (
         Purchase.objects.filter(paid_filter)
@@ -187,7 +200,7 @@ class LogEntryAdmin(admin.ModelAdmin):
 
 
 # ─── Regroupement de l'admin en 5 sections métier ───
-SECTION_ORDER = ["Médias", "Utilisateurs", "Catégories & Qualités", "Paiements", "Activités"]
+SECTION_ORDER = ["Médias", "Contributeurs", "Utilisateurs", "Catégories & Qualités", "Paiements", "Activités"]
 
 MODEL_SECTIONS = {
     "media": "Médias",
@@ -199,6 +212,11 @@ MODEL_SECTIONS = {
     "paymentlog": "Paiements",
     "paymentsession": "Paiements",
     "pricingconfig": "Paiements",
+    "contributorprofile": "Contributeurs",
+    "payoutrequest": "Contributeurs",
+    "contributorearning": "Contributeurs",
+    "buyoutrate": "Contributeurs",
+    "contributorsettings": "Contributeurs",
     "notification": "Activités",
     "logentry": "Activités",
 }
@@ -207,9 +225,37 @@ MODEL_ORDER = [
     "media", "medialike",
     "user",
     "category", "quality",
+    "contributorprofile", "payoutrequest", "contributorearning", "buyoutrate", "contributorsettings",
     "purchase", "paymentlog", "paymentsession", "pricingconfig",
     "notification", "logentry",
 ]
+
+
+def _add_contributor_shortcuts(sections: dict) -> None:
+    """Section Contributeurs : raccourci « Médias à valider » en tête, et compteurs
+    de ce qui attend une action (médias en attente, retraits à traiter)."""
+    from media_app.models import Media
+    from contributors.models import PayoutRequest
+
+    contributors = sections.get("Contributeurs")
+    if not contributors:
+        return
+    pending_media = Media.objects.filter(status="pending", contributor__isnull=False).count()
+    pending_payouts = PayoutRequest.objects.filter(status="requested").count()
+
+    for entry in contributors:
+        if entry["model"]._meta.model_name == "payoutrequest" and pending_payouts:
+            entry["name"] = f"Demandes de retrait ({pending_payouts} à traiter)"
+            entry["admin_url"] = f"{entry['admin_url']}?status__exact=requested"
+
+    media_entry = next((m for m in sections.get("Médias", []) if m["model"]._meta.model_name == "media"), None)
+    if media_entry:
+        shortcut = dict(media_entry)
+        shortcut["name"] = f"Médias à valider ({pending_media})" if pending_media else "Médias à valider"
+        shortcut["admin_url"] = f"{media_entry['admin_url']}?status__exact=pending&contributor__isnull=False"
+        shortcut["add_url"] = None
+        shortcut["_sort"] = -1
+        contributors.insert(0, shortcut)
 
 
 def get_app_list(request, app_label=None):
@@ -225,8 +271,12 @@ def get_app_list(request, app_label=None):
             sections.setdefault(section_name, []).append(model_dict)
 
     def sort_key(model_dict):
+        if "_sort" in model_dict:
+            return model_dict["_sort"]
         model_name = model_dict["model"]._meta.model_name
         return MODEL_ORDER.index(model_name) if model_name in MODEL_ORDER else len(MODEL_ORDER)
+
+    _add_contributor_shortcuts(sections)
 
     app_list = []
     for section_name in SECTION_ORDER:

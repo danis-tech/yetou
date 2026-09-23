@@ -61,6 +61,7 @@ export default function PhotoCard({ photo, idx, onBuy, onContextCapture, onToggl
       </div>
       <div className="photo-overlay">
         <div className="photo-info-title">{photo.title}</div>
+        {photo.contributorName && <span className="contrib-credit">par {photo.contributorName}, contributeur</span>}
         <div className="photo-info-sub">
           {photo.details.split("·").slice(1).join("·").trim()}
           <span className="photo-stats">

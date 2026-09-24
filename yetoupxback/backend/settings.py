@@ -20,13 +20,19 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
-# ─── Cloudflare R2 ───
+# ─── Stockage : Cloudflare R2 (médias) + WhiteNoise (statiques) ───
+# En local (DEBUG=True), stockage statique classique : rien à changer pour le dev.
+# En production (DEBUG=False), WhiteNoise compresse et versionne les fichiers statiques.
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
     },
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
 
@@ -77,6 +83,7 @@ SITE_ID = 1
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -106,16 +113,22 @@ TEMPLATES = [
 WSGI_APPLICATION = "backend.wsgi.application"
 
 # ─── Base de données ───
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME"),
-        "USER": env("DB_USER"),
-        "PASSWORD": env("DB_PASSWORD"),
-        "HOST": env("DB_HOST", default="localhost"),
-        "PORT": env("DB_PORT", default="5432"),
+# Production (Render) : DATABASE_URL est défini → on l'utilise.
+# Local : DATABASE_URL absent du .env → tes variables DB_* habituelles.
+if env("DATABASE_URL", default=""):
+    DATABASES = {"default": env.db("DATABASE_URL")}
+    DATABASES["default"]["CONN_MAX_AGE"] = 600
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env("DB_NAME"),
+            "USER": env("DB_USER"),
+            "PASSWORD": env("DB_PASSWORD"),
+            "HOST": env("DB_HOST", default="localhost"),
+            "PORT": env("DB_PORT", default="5432"),
+        }
     }
-}
 
 # ─── Custom User ───
 AUTH_USER_MODEL = "users_app.User"
@@ -133,7 +146,8 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-STATICFILES_DIRS = [BASE_DIR / "static"]
+# Le dossier "static" n'est ajouté que s'il existe (Git n'envoie pas les dossiers vides).
+STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ─── MyPVit (docs.mypvit.pro) — Airtel Money, Moov Money, Visa/Mastercard ───
@@ -162,15 +176,21 @@ MYPVIT_FAILED_REDIRECTION_URL_CODE = env("MYPVIT_FAILED_REDIRECTION_URL_CODE", d
 # IP/réseaux sortants de MyPVit (fournis par leur support), séparés par des
 # virgules. Si défini, tout webhook venant d'une autre IP est rejeté.
 MYPVIT_WEBHOOK_ALLOWED_IPS = [ip.strip() for ip in env("MYPVIT_WEBHOOK_ALLOWED_IPS", default="").split(",") if ip.strip()]
-# True uniquement derrière un reverse proxy de confiance (nginx...) qui ajoute
+# True uniquement derrière un reverse proxy de confiance (nginx, Render...) qui ajoute
 # l'IP réelle du client dans X-Forwarded-For.
 TRUST_X_FORWARDED_FOR = env("TRUST_X_FORWARDED_FOR", default=False, cast=bool)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ─── CORS ───
+# ─── CORS / CSRF ───
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS", default="http://localhost:3000").split(",")
 CORS_ALLOW_CREDENTIALS = True
+
+# Origines autorisées pour les requêtes POST protégées par CSRF (admin Django en HTTPS...).
+CSRF_TRUSTED_ORIGINS = env(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000",
+).split(",")
 
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
@@ -206,7 +226,7 @@ REST_FRAMEWORK = {
     },
 }
 
-# ─── Sécurité HTTP (production) ───
+# ─── Sécurité HTTP (production uniquement, jamais actif en local avec DEBUG=True) ───
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
